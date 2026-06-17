@@ -1,0 +1,20 @@
+{
+  "name": "@iris/evals",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Iris discovery-accuracy benchmark: Iris two-tier retrieval vs a naive flat-description baseline.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "bench": "tsx src/run.ts",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@iris/core": "workspace:*",
+    "@iris/embeddings": "workspace:*"
+  }
+}

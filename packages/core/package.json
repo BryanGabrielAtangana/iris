@@ -1,0 +1,34 @@
+{
+  "name": "@iris/core",
+  "version": "0.1.0",
+  "description": "Iris core — skill scanning, parsing, Tier-1 index, Tier-2 retrieval, ranking and the iris.lock manifest.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@iris/protocol": "workspace:*",
+    "@iris/embeddings": "workspace:*",
+    "chokidar": "^5.0.0",
+    "gray-matter": "^4.0.3",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5"
+  }
+}

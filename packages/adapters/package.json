@@ -1,0 +1,30 @@
+{
+  "name": "@iris/adapters",
+  "version": "0.1.0",
+  "description": "Iris surface adapters — write skills and the Tier-1 index into agent surfaces (Claude Code, Codex, …).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@iris/core": "workspace:*",
+    "@iris/protocol": "workspace:*"
+  }
+}
