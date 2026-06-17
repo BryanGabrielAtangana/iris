@@ -1,0 +1,33 @@
+{
+  "name": "@iris/embeddings",
+  "version": "0.1.0",
+  "description": "Iris embeddings — pluggable provider interface, a zero-dependency offline default, and an embedded vector store.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "fastembed": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "fastembed": {
+      "optional": true
+    }
+  }
+}

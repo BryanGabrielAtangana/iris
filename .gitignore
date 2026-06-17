@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Iris local artifacts
+.iris/
+*.iris-index
