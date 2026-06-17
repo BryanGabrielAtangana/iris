@@ -11,12 +11,7 @@ import {
 } from "@iris/embeddings";
 import { scanLibrary, type ScanResult } from "./scan.js";
 import { buildTier1Index, type Tier1Options } from "./tier1.js";
-import {
-  skillIndexText,
-  lexicalScore,
-  combineScores,
-  type CombineWeights,
-} from "./ranking.js";
+import { skillIndexText, lexicalScore, combineScores, type CombineWeights } from "./ranking.js";
 import { readLockfile, writeLockfile, buildLockfile } from "./lockfile-io.js";
 import { watchLibrary, type Unsubscribe } from "./watch.js";
 

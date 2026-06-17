@@ -1,10 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import {
-  type Skill,
-  type Tier1Entry,
-  TIER1_TOKEN_BUDGET,
-  estimateTokens,
-} from "@iris/protocol";
+import { type Skill, type Tier1Entry, TIER1_TOKEN_BUDGET, estimateTokens } from "@iris/protocol";
 
 /** Derive the Tier-1 one-liner for a skill. */
 export function tier1Line(skill: Skill): string {
@@ -19,8 +14,7 @@ export function toTier1Entry(skill: Skill): Tier1Entry {
   return {
     id: skill.id,
     name: skill.metadata.name,
-    when_to_use:
-      skill.metadata.when_to_use?.trim() || firstSentence(skill.metadata.description),
+    when_to_use: skill.metadata.when_to_use?.trim() || firstSentence(skill.metadata.description),
   };
 }
 
@@ -44,9 +38,7 @@ export interface Tier1Options {
  */
 export function buildTier1Index(skills: Skill[], opts: Tier1Options = {}): string {
   const budget = opts.budget ?? TIER1_TOKEN_BUDGET;
-  const sorted = [...skills].sort((a, b) =>
-    a.metadata.name.localeCompare(b.metadata.name),
-  );
+  const sorted = [...skills].sort((a, b) => a.metadata.name.localeCompare(b.metadata.name));
   const lines = sorted.map(tier1Line);
 
   const header = "# Available skills (Iris) — call iris_find to retrieve, iris_load to open";

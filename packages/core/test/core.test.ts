@@ -56,7 +56,10 @@ describe("buildTier1Index", () => {
 describe("IrisLibrary.find (Tier-2 retrieval)", () => {
   let lib: IrisLibrary;
   beforeAll(async () => {
-    lib = new IrisLibrary({ root: LIB, indexPath: join(await mkdtemp(join(tmpdir(), "iris-")), "i.json") });
+    lib = new IrisLibrary({
+      root: LIB,
+      indexPath: join(await mkdtemp(join(tmpdir(), "iris-")), "i.json"),
+    });
     await lib.load();
   });
 
