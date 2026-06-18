@@ -20,6 +20,7 @@
   "dependencies": {
     "@iris-sylvia/adapters": "workspace:*",
     "@iris-sylvia/core": "workspace:*",
+    "@iris-sylvia/embeddings": "workspace:*",
     "@iris-sylvia/protocol": "workspace:*",
     "commander": "^15.0.0"
   },

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { IrisLibrary, readManifest, readManifestFile, resolveLoadout } from "@iris-sylvia/core";
+import { resolveDefaultProvider } from "@iris-sylvia/embeddings";
 import { createIrisMcpServer, type CreateServerOptions, type ServerScope } from "./server.js";
 
 export interface StdioOptions extends CreateServerOptions {
@@ -25,8 +26,17 @@ export interface StdioOptions extends CreateServerOptions {
  */
 export async function startStdioServer(
   opts: StdioOptions,
-): Promise<{ stop: () => Promise<void>; scope?: ServerScope; scopeErrors?: string[] }> {
-  const lib = new IrisLibrary({ root: opts.root });
+): Promise<{
+  stop: () => Promise<void>;
+  scope?: ServerScope;
+  scopeErrors?: string[];
+  provider: string;
+}> {
+  // Semantic embeddings by default; falls back to the lexical engine offline.
+  const provider = await resolveDefaultProvider({
+    onFallback: (reason) => process.stderr.write(`[iris] ${reason}\n`),
+  });
+  const lib = new IrisLibrary({ root: opts.root, provider });
   await lib.load();
 
   // Resolve a loadout if one is provided or present in the library root.
@@ -62,5 +72,5 @@ export async function startStdioServer(
     unwatch?.();
     await server.close();
   };
-  return { stop, scope, scopeErrors };
+  return { stop, scope, scopeErrors, provider: provider.name };
 }

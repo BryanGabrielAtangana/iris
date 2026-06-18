@@ -10,6 +10,7 @@
  */
 export * from "./provider.js";
 export * from "./local.js";
+export * from "./transformers.js";
 export * from "./fastembed.js";
 export * from "./store.js";
 export * from "./factory.js";
