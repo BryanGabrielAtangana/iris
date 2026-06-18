@@ -1,6 +1,6 @@
 {
   "name": "@iris-sylvia/adapters",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Iris surface adapters — write skills and the Tier-1 index into agent surfaces (Claude Code, Codex, …).",
   "license": "Apache-2.0",
   "type": "module",
