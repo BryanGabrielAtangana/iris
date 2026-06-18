@@ -13,7 +13,8 @@
     "bench": "tsx src/run.ts",
     "clean": "rm -rf dist .turbo",
     "accuracy": "tsx src/accuracy.ts",
-    "benchoff": "tsx src/bench.ts"
+    "benchoff": "tsx src/bench.ts",
+    "abstain": "tsx src/abstain.ts"
   },
   "dependencies": {
     "@iris-sylvia/core": "workspace:*",

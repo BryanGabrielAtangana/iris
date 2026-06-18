@@ -82,10 +82,15 @@ jobs:
           IRIS_MODEL_CACHE: ${{ github.workspace }}/.model-cache
         run: pnpm --filter @iris-sylvia/evals accuracy
 
-      - name: Run strategy bench-off (semantic vs bm25 vs hybrid, per subset)
+      - name: Run fusion bench-off (per subset, picks the default ranker)
         env:
           IRIS_MODEL_CACHE: ${{ github.workspace }}/.model-cache
         run: pnpm --filter @iris-sylvia/evals benchoff
+
+      - name: Calibrate abstention (rejection-recall @ precision ≥ 95%)
+        env:
+          IRIS_MODEL_CACHE: ${{ github.workspace }}/.model-cache
+        run: pnpm --filter @iris-sylvia/evals abstain
 
       - name: Save embedding model cache
         # Only when not already cached AND the real ONNX weights are present, so a
