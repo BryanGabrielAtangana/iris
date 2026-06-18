@@ -64,7 +64,7 @@ describe("ClaudeCodeAdapter (exec-capable)", () => {
     const claudeMd = await readFile(indexFile, "utf8");
     expect(claudeMd).toContain("- pdf-forms — Use when");
     // The behavioral directive must ride along so skills fire automatically.
-    expect(claudeMd).toContain("call `iris_find`");
+    expect(claudeMd).toContain("`find_skill`");
     expect(indexFile.endsWith("CLAUDE.md")).toBe(true);
   });
 
@@ -110,7 +110,7 @@ describe("CursorAdapter (always-applied rule)", () => {
     expect(indexFile).toBe(join(target, ".cursor", "rules", "iris.mdc"));
     const mdc = await readFile(indexFile, "utf8");
     expect(mdc).toContain("alwaysApply: true");
-    expect(mdc).toContain("call `iris_find`");
+    expect(mdc).toContain("`find_skill`");
     expect(mdc).toContain("- pdf-forms — Use when");
     // skills are also copied for non-MCP reference
     expect(await exists(join(target, ".cursor", "skills", "pdf-forms", "SKILL.md"))).toBe(true);
@@ -132,9 +132,9 @@ describe("CursorAdapter (always-applied rule)", () => {
 describe("renderAwareness", () => {
   it("prefixes the index with the behavioral directive", () => {
     const out = renderAwareness("- foo — bar");
-    expect(out).toContain("call `iris_find`");
+    expect(out).toContain("`find_skill`");
     expect(out).toContain("- foo — bar");
-    expect(out.indexOf("iris_find")).toBeLessThan(out.indexOf("- foo — bar"));
+    expect(out.indexOf("find_skill")).toBeLessThan(out.indexOf("- foo — bar"));
   });
 });
 

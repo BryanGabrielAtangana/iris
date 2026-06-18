@@ -21,7 +21,7 @@ function findDescription(lib: IrisLibrary): string {
   return [
     "Search the user's Iris skill library and return the most relevant skills for a task.",
     "Call this whenever a request might be handled by one of the skills below, then use",
-    "`iris_load` to open the winning skill's full instructions.",
+    "`load_skill` to open the winning skill's full instructions.",
     "",
     "The always-current skill index (name — when to use):",
     "",
@@ -72,14 +72,14 @@ export function createIrisMcpServer(
       },
       instructions:
         "Iris knows every capability you own and hands the right one to whatever agent " +
-        "you're working with, exactly when it's needed. Use iris_find to discover skills " +
-        "and iris_load to open them.",
+        "you're working with, exactly when it's needed. Use find_skill to discover skills " +
+        "and load_skill to open them.",
     },
   );
 
   // --- Tier 2: iris_find (description carries the Tier-1 awareness index) ---
   const findTool: RegisteredTool = server.registerTool(
-    "iris_find",
+    "find_skill",
     {
       title: "Find Iris skills",
       description: findDescription(lib),
@@ -96,10 +96,10 @@ export function createIrisMcpServer(
 
   // --- Tier 3: iris_load ---
   server.registerTool(
-    "iris_load",
+    "load_skill",
     {
       title: "Load an Iris skill",
-      description: "Return the full SKILL.md body for a skill id (from iris_find results).",
+      description: "Return the full SKILL.md body for a skill id (from find_skill results).",
       inputSchema: { id: z.string().describe("The skill id to load.") },
     },
     async ({ id }) => {
@@ -111,7 +111,7 @@ export function createIrisMcpServer(
 
   // --- Optional execution: iris_execute_script ---
   server.registerTool(
-    "iris_execute_script",
+    "run_skill_script",
     {
       title: "Run an Iris skill script",
       description:
@@ -125,7 +125,7 @@ export function createIrisMcpServer(
     async ({ id, script, args }) => {
       if (!allowExec) {
         return errorText(
-          "Script execution is not supported on this surface. Load the skill with iris_load and follow its instructions manually.",
+          "Script execution is not supported on this surface. Load the skill with load_skill and follow its instructions manually.",
         );
       }
       const skill = lib.getSkill(id);

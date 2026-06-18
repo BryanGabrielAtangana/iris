@@ -40,18 +40,18 @@ describe("Iris MCP server (real client over in-memory transport)", () => {
 
   it("exposes the Tier-1 awareness index inside the iris_find tool description", async () => {
     const { tools } = await client.listTools();
-    const find = tools.find((t) => t.name === "iris_find");
+    const find = tools.find((t) => t.name === "find_skill");
     expect(find).toBeDefined();
     expect(find?.description).toContain("- pdf-forms — Use when");
     expect(find?.description).toContain("- git-commit — Use when");
     expect(tools.map((t) => t.name)).toEqual(
-      expect.arrayContaining(["iris_find", "iris_load", "iris_execute_script"]),
+      expect.arrayContaining(["find_skill", "load_skill", "run_skill_script"]),
     );
   });
 
-  it("returns ranked candidates from iris_find", async () => {
+  it("returns ranked candidates from find_skill", async () => {
     const result = (await client.callTool({
-      name: "iris_find",
+      name: "find_skill",
       arguments: { query: "fill out a pdf form", k: 3 },
     })) as { content: { type: string; text?: string }[] };
     const parsed = JSON.parse(firstText(result)) as { id: string; score: number }[];
@@ -59,9 +59,9 @@ describe("Iris MCP server (real client over in-memory transport)", () => {
     expect(parsed.length).toBeLessThanOrEqual(3);
   });
 
-  it("loads a full skill body via iris_load", async () => {
+  it("loads a full skill body via load_skill", async () => {
     const result = (await client.callTool({
-      name: "iris_load",
+      name: "load_skill",
       arguments: { id: "git-commit" },
     })) as { content: { type: string; text?: string }[]; isError?: boolean };
     expect(result.isError).toBeFalsy();
@@ -70,7 +70,7 @@ describe("Iris MCP server (real client over in-memory transport)", () => {
 
   it("reports a clear error for an unknown skill id", async () => {
     const result = (await client.callTool({
-      name: "iris_load",
+      name: "load_skill",
       arguments: { id: "does-not-exist" },
     })) as { content: { type: string; text?: string }[]; isError?: boolean };
     expect(result.isError).toBe(true);
@@ -92,9 +92,9 @@ describe("Iris MCP server (real client over in-memory transport)", () => {
     expect(prompt.messages[0]?.content.type).toBe("text");
   });
 
-  it("executes a bundled script via iris_execute_script", async () => {
+  it("executes a bundled script via run_skill_script", async () => {
     const result = (await client.callTool({
-      name: "iris_execute_script",
+      name: "run_skill_script",
       arguments: { id: "pdf-forms", script: "scripts/fill.py" },
     })) as { content: { type: string; text?: string }[]; isError?: boolean };
     // python3 may be unavailable in some environments; accept success or a

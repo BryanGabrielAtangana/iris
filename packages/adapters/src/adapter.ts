@@ -48,11 +48,12 @@ export const IRIS_DIRECTIVE = [
   "## Iris skills",
   "",
   "You have an Iris skill library available through the `iris` MCP server.",
-  "Before starting any non-trivial task, FIRST call `iris_find` with the user's",
-  "intent to check for a matching skill. If a clearly relevant skill is returned,",
-  "call `iris_load` with its id and follow that skill's instructions rather than",
-  "improvising or reconstructing an approach from prior commits or files. Only",
-  "fall back to your own approach when no skill matches.",
+  "Before starting any non-trivial task, you MUST FIRST call the `find_skill`",
+  "tool with the user's intent to check for a matching skill. If a clearly",
+  "relevant skill is returned, call `load_skill` with its id and follow that",
+  "skill's instructions rather than improvising or reconstructing an approach",
+  "from prior commits or files. Only fall back to your own approach when",
+  "`find_skill` returns nothing relevant.",
 ].join("\n");
 
 /**

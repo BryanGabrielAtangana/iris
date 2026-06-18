@@ -14,7 +14,7 @@ export const Tier1Entry = z.object({
 export type Tier1Entry = z.infer<typeof Tier1Entry>;
 
 /**
- * A ranked candidate returned by Tier-2 retrieval (`iris_find`).
+ * A ranked candidate returned by Tier-2 retrieval (`find_skill`).
  */
 export const FindResult = z.object({
   id: z.string(),

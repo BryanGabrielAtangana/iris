@@ -12,7 +12,7 @@ import { copySkill, writeFileEnsured } from "./fs-utils.js";
  * `alwaysApply: true`, so the awareness directive + Tier-1 index are always in
  * the agent's context and skills fire automatically — the same plug-and-play
  * behavior the Claude Code and Codex adapters provide. Skills themselves are
- * served on demand through the Iris MCP server (`iris_load`); copies are also
+ * served on demand through the Iris MCP server (`load_skill`); copies are also
  * written to `.cursor/skills/<id>` for non-MCP reference. Cursor can execute,
  * so scripts are included.
  */
