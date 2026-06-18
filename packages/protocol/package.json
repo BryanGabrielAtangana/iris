@@ -1,6 +1,6 @@
 {
   "name": "@iris-sylvia/protocol",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Iris Skill Access Protocol — zod schemas + generated JSON Schema. Zero runtime deps beyond zod.",
   "license": "Apache-2.0",
   "type": "module",

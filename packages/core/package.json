@@ -1,6 +1,6 @@
 {
   "name": "@iris-sylvia/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Iris core — skill scanning, parsing, Tier-1 index, Tier-2 retrieval, ranking and the iris.lock manifest.",
   "license": "Apache-2.0",
   "type": "module",
