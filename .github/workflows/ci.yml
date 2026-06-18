@@ -65,18 +65,30 @@ jobs:
         run: pnpm build
 
       # Cache the transformers.js model weights so the ~23MB download happens
-      # at most once (the GitHub runner can reach huggingface.co; restricted
-      # sandboxes cannot, which is why this measurement lives in CI). The path
-      # must match where transformers.js actually writes — pinned below via
-      # IRIS_MODEL_CACHE — otherwise the save is a no-op and every run
-      # re-downloads and hits HF 429 rate limits.
-      - name: Cache embedding model
-        uses: actions/cache@v4
+      # at most once. The path must match where transformers.js actually writes
+      # (pinned via IRIS_MODEL_CACHE) or the save is a no-op and every run
+      # re-downloads and trips HF 429s. Restore/save are split so we only save a
+      # *complete* download — caching a failed/partial fetch would poison the key
+      # and lock every future run onto the lexical fallback.
+      - name: Restore embedding model cache
+        id: model-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ github.workspace }}/.model-cache
-          key: iris-embedding-model-all-MiniLM-L6-v2
+          key: iris-embedding-model-all-MiniLM-L6-v2-onnx
 
       - name: Run accuracy benchmark (downloads the model on first run)
         env:
           IRIS_MODEL_CACHE: ${{ github.workspace }}/.model-cache
         run: pnpm --filter @iris-sylvia/evals accuracy
+
+      - name: Save embedding model cache
+        # Only when not already cached AND the real ONNX weights are present, so a
+        # transient fetch failure can never persist an empty cache.
+        if: >-
+          steps.model-cache.outputs.cache-hit != 'true' &&
+          hashFiles(format('{0}/.model-cache/**/*.onnx', github.workspace)) != ''
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.model-cache
+          key: iris-embedding-model-all-MiniLM-L6-v2-onnx

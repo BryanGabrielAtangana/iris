@@ -34,7 +34,17 @@ export function createEmbeddingProvider(opts: CreateProviderOptions = {}): Embed
 export interface ResolveProviderOptions extends CreateProviderOptions {
   /** Called with a human-readable note when the semantic model can't load. */
   onFallback?: (reason: string) => void;
+  /**
+   * Extra attempts to load the model before falling back. Default 0 (runtime
+   * callers want a fast, single try). CI sets this so a transient Hugging Face
+   * blip (429 / "fetch failed") doesn't silently drop the semantic measurement.
+   */
+  retries?: number;
+  /** Base delay between retries in ms (exponential backoff). Default 1000. */
+  retryDelayMs?: number;
 }
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Resolve the runtime default embedding provider for accuracy.
@@ -57,16 +67,24 @@ export async function resolveDefaultProvider(
     kind === "fastembed"
       ? new FastEmbedProvider({ model, dimensions: opts.dimensions })
       : new TransformersEmbeddingProvider({ model, dimensions: opts.dimensions });
-  try {
-    // Warm so failures surface now (and the vector store gets the right dims).
-    if ("warm" in provider && typeof provider.warm === "function") await provider.warm();
-    else await provider.embed(["warmup"]);
-    return provider;
-  } catch (err) {
-    opts.onFallback?.(
-      `${provider.name} unavailable (${err instanceof Error ? err.message : String(err)}); using local lexical embeddings`,
-    );
-    return new LocalHashingProvider(opts.dimensions);
+
+  const attempts = Math.max(0, opts.retries ?? 0);
+  const baseDelay = opts.retryDelayMs ?? 1000;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      // Warm so failures surface now (and the vector store gets the right dims).
+      if ("warm" in provider && typeof provider.warm === "function") await provider.warm();
+      else await provider.embed(["warmup"]);
+      return provider;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      if (attempt < attempts) {
+        await sleep(baseDelay * 2 ** attempt);
+        continue;
+      }
+      opts.onFallback?.(`${provider.name} unavailable (${reason}); using local lexical embeddings`);
+      return new LocalHashingProvider(opts.dimensions);
+    }
   }
 }
 

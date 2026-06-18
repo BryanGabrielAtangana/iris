@@ -142,8 +142,13 @@ async function main(): Promise<void> {
   const lexical = await runAccuracy(createEmbeddingProvider({ kind: "local" }), dir);
   process.stdout.write(formatReport(lexical) + "\n\n");
 
+  // Retry the model load in CI: a transient HF 429 / "fetch failed" would
+  // otherwise drop to the lexical fallback and silently skip the semantic floor
+  // and the bench. Locally (firewalled) retries just add latency, so gate on CI.
   const semanticProvider = await resolveDefaultProvider({
     onFallback: (r) => process.stderr.write(`[accuracy] ${r}\n`),
+    retries: process.env.CI ? 4 : 0,
+    retryDelayMs: 2000,
   });
   const semantic = await runAccuracy(semanticProvider, dir);
   process.stdout.write(formatReport(semantic) + "\n");
