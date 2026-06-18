@@ -1,5 +1,14 @@
 # @iris-sylvia/cli
 
+## 0.2.1
+
+### Patch Changes
+
+- 4470c91: Fix the `iris` CLI producing no output when run via `npx`/an installed bin. The
+  entrypoint used an `import.meta.url === argv[1]` guard that silently no-op'd when
+  invoked through npm's `.bin` symlink (argv[1] is the symlink path). The bin now
+  runs unconditionally; tests import `buildProgram` from `./program.js`.
+
 ## 0.2.0
 
 ### Minor Changes
