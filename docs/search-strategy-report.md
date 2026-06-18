@@ -2,7 +2,7 @@
 
 # Iris Search Strategy — Implementation Report
 
-**Audience:** reviewer · **Status:** Task 0 (gate) merged · Task 4 (per-field) **rejected — negative result** · Task 2 (BM25) in review · **Date:** 2026-06-18
+**Audience:** reviewer · **Status:** ranker settled — MiniLM blob + `blend@.3` + top-1 abstention. Tasks 0/2/3/1 merged; Task 4 (per-field) & v0.4 model sweep **rejected — negative results, MiniLM Pareto-optimal**. · **Date:** 2026-06-18
 
 ## 1. Thesis
 
@@ -210,20 +210,54 @@ operating point on the production ranker by data ✅; bias to high precision ✅
 keep acc@1 ≥95% ✅. The original "≥90% @ ≥95%" is **recorded as not achievable**
 without a reranker — a candidate for a future task, not a regression.
 
-## 11. Remaining tasks
+## 11. Model sweep (v0.4) — **keep MiniLM**
+
+Swapped only the dense engine (blob + `blend@.3` held fixed) and measured five
+candidates on a manual CI matrix (`model-sweep.yml`), one cost-isolated job each.
+Per-model abstention was **re-calibrated** (never reusing MiniLM's 0.18).
+
+| model (q8, MiniLM-cached CI) | full acc@1 | sem-only | exact | reject(blend) | download | embed p95 | RSS |
+| ---------------------------- | ---------- | -------- | ----- | ------------- | -------- | --------- | --- |
+| **MiniLM-L6-v2 (default)**   | **95.5%**  | **83.3%**| 100%  | 65.4%         | **23 MB**| **3.9 ms**| **409 MB** |
+| bge-small-en-v1.5            | 93.8%      | 77.8%    | 100%  | 59.6%         | 33 MB    | 8.0 ms    | 332 MB |
+| e5-small-v2                  | 88.4%      | 44.4%    | 100%  | 78.8%         | 33 MB    | 6.4 ms    | 431 MB |
+| nomic-embed-text-v1.5 (→256) | 91.1%      | 55.6%    | 100%  | 86.5%         | 132 MB   | 21.5 ms   | 840 MB |
+| embeddinggemma-300m (→256)   | 96.4%      | 83.3%    | 100%  | 65.4%         | 316 MB   | 121 ms    | 1676 MB |
+
+**Decision — keep MiniLM.** No candidate clears the bar:
+
+- **bge-small / e5-small** regress accuracy (e5 collapses on paraphrases, 44.4%).
+- **nomic** regresses accuracy (91.1% / 55.6%) despite the best rejection (86.5%) —
+  the asymmetric models trade ranking accuracy for cleaner rejection, the wrong
+  side of the trade when acc@1 is the moat.
+- **embeddinggemma-300m** *matches* MiniLM on quality (+0.9 pt full is inside the
+  ~2-pt noise band on n=112; sem-only and rejection tie) but at **14× download,
+  31× embed latency (121 ms vs 3.9), 4× RAM** — unacceptable for an always-on
+  engine. It is at most an opt-in high-accuracy provider, never the default.
+
+MiniLM is **Pareto-optimal** here: nothing both matches its accuracy and stays
+near its cost. Recorded as a negative result, exactly as the handoff allowed.
+
+**Decoupled-abstention experiment:** computing `noStrongMatch` from the
+pure-semantic top-1 (instead of the blended score) rejected **worse on every
+model** (e.g. e5 28.8% vs 78.8%, MiniLM 55.8% vs 65.4%). The Task-3-inspired
+hypothesis is false — abstention stays on the blended score.
+
+The prefix/MRL plumbing and the opt-in sweep job stay in the tree, so re-running
+the comparison when the library grows (where a stronger model may finally earn
+its cost) is one `workflow_dispatch` away.
+
+## 12. Remaining tasks
 
 - **Stronger abstention (optional):** cross-encoder rerank / small judge over the
   top candidate to push rejection past the ~60% score-based ceiling — only if the
   product needs it.
-- **Model sweep (was Task 5):** MiniLM vs bge-small-en-v1.5 vs e5-small-v2 — needs
-  query/passage-prefix plumbing + multi-model caching; split out to avoid a
-  3-download 429 storm on every push.
 - **Task 6 (content-hash cache):** the **CI model-cache half is DONE** (pinned
   `IRIS_MODEL_CACHE`, conditional save, retries — CI now measures semantic
   reliably). The embedding-cache half (skip re-embedding unchanged skills on
   load) remains.
 
-## 12. Known issues
+## 13. Known issues
 
 - The combined lexical engine sits at 38.9% on the semantic-only subset (gate is
   ≤40%) — passing but tight. Growing the subset toward ~40 cases (with CI
@@ -233,11 +267,13 @@ without a reranker — a candidate for a future task, not a regression.
 
 **Bottom line:** the ruler keeps overruling the plan — by design, and that is the
 result. It rejected a predicted win (per-field, Task 4), a prescribed mechanism
-(RRF, Task 3), and a prescribed feature set + target for abstention (margin/z and
-≥90%@95%, Task 1). What survived contact with the data is simpler and honest:
-**`blend@.3`** (0.7·cosine + 0.3·BM25) for ranking — restoring the 95.5% / 83.3%
-peak — and **top-1 confidence** for abstention, biased to precision, rejecting
-~62% of off-topic queries while almost never crying wolf. The reliable-CI
-measurement loop is the real asset: every one of those reversals was caught by a
-gate, not by a reviewer. Pushing abstention past its score-based ceiling (a
-reranker) and the embedding-model sweep are the remaining levers.
+(RRF, Task 3), a prescribed feature set + target for abstention (margin/z and
+≥90%@95%, Task 1), and a slate of "better" embedding models (v0.4 — MiniLM is
+Pareto-optimal). What survived contact with the data is simpler and honest:
+**MiniLM** blob embeddings, **`blend@.3`** (0.7·cosine + 0.3·BM25) for ranking —
+restoring the 95.5% / 83.3% peak — and **top-1 confidence** for abstention, biased
+to precision, rejecting ~62% of off-topic queries while almost never crying wolf.
+The reliable-CI measurement loop is the real asset: every one of those reversals
+was caught by a gate, not by a reviewer. The remaining lever, if the product
+needs it, is a cross-encoder/judge reranker to lift the rejection ceiling — a
+heavier signal for a measured, not assumed, need.
