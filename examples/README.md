@@ -21,11 +21,11 @@ paying to load them all:
 
 - **Tier 1 — awareness.** A compact mini-index of every skill (name + when to
   use) is always in context. For Claude Code this is injected into `CLAUDE.md`;
-  for the MCP server it lives in the `iris_find` tool description.
-- **Tier 2 — retrieval.** `iris search` / `iris_find` runs local, offline
+  for the MCP server it lives in the `find_skill` tool description.
+- **Tier 2 — retrieval.** `iris search` / `find_skill` runs local, offline
   semantic retrieval to rank the skills most relevant to the task at hand.
 - **Tier 3 — on-demand load.** Only the chosen skill's full instructions (and
-  any reference files) are loaded, via `iris_load` or the `skill://<id>`
+  any reference files) are loaded, via `load_skill` or the `skill://<id>`
   resource.
 
 For the protocol details, see [`../spec/skill-access-protocol.md`](../spec/skill-access-protocol.md).

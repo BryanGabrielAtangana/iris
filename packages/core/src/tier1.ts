@@ -41,7 +41,7 @@ export function buildTier1Index(skills: Skill[], opts: Tier1Options = {}): strin
   const sorted = [...skills].sort((a, b) => a.metadata.name.localeCompare(b.metadata.name));
   const lines = sorted.map(tier1Line);
 
-  const header = "# Available skills (Iris) — call iris_find to retrieve, iris_load to open";
+  const header = "# Available skills (Iris) — call find_skill to retrieve, load_skill to open";
   const full = [header, ...lines].join("\n");
   if (estimateTokens(full) <= budget) return full;
 
@@ -58,7 +58,7 @@ export function buildTier1Index(skills: Skill[], opts: Tier1Options = {}): strin
   }
   const remaining = lines.length - shown;
   if (remaining > 0) {
-    kept.push(`- …and ${remaining} more skills — call iris_find to discover them by intent.`);
+    kept.push(`- …and ${remaining} more skills — call find_skill to discover them by intent.`);
   }
   return kept.join("\n");
 }

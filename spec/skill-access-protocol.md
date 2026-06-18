@@ -93,10 +93,10 @@ A tiny (~1k token) always-present mini-index, one line per skill:
 
 It is deterministic (sorted by name), regenerable, and budgeted: if a library
 is too large to fit, lines are kept until the budget is reached and the
-remainder is summarized (`…and N more skills — call iris_find`). Retrieval is
+remainder is summarized (`…and N more skills — call find_skill`). Retrieval is
 invisible if the agent does not know the library exists, so **Tier 1 must always
 be injected** into a surface the agent already loads (e.g. `CLAUDE.md`,
-`AGENTS.md`) and into the `iris_find` tool description.
+`AGENTS.md`) and into the `find_skill` tool description.
 
 The Tier-1 line for a skill is `- {name} — {when_to_use || first sentence of description}`.
 
@@ -112,7 +112,7 @@ ranking). Embeddings are pluggable; the default is fully **local and offline**.
 
 ### Tier 3 — Load
 
-The full `SKILL.md` body is loaded on demand (`iris_load`), and
+The full `SKILL.md` body is loaded on demand (`load_skill`), and
 references/scripts/assets are loaded only when needed — progressive disclosure
 done correctly.
 
@@ -123,10 +123,10 @@ Codex, Cursor, Gemini CLI, etc. without modifying those agents.
 
 ### Tools
 
-- `iris_find(query: string, k?: number)` → ranked `{ id, name, score, when_to_use }[]`.
+- `find_skill(query: string, k?: number)` → ranked `{ id, name, score, when_to_use }[]`.
   **The tool's description embeds the Tier-1 index** — this is the awareness signal.
-- `iris_load(id: string)` → the full `SKILL.md` body.
-- `iris_execute_script(id, script, args?)` → run a bundled script on
+- `load_skill(id: string)` → the full `SKILL.md` body.
+- `run_skill_script(id, script, args?)` → run a bundled script on
   exec-capable surfaces; otherwise return a clear "not supported here" message.
   Only scripts the skill declares can run, resolved inside the skill directory.
 

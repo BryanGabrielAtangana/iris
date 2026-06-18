@@ -174,7 +174,7 @@ everything you've written around it is left untouched:
 
 <!-- IRIS:BEGIN (managed by `iris sync` — do not edit) -->
 
-# Available skills (Iris) — call iris_find to retrieve, iris_load to open
+# Available skills (Iris) — call find_skill to retrieve, load_skill to open
 
 - git-commit-message — Use when writing or improving a git commit message for staged changes.
 - pdf-forms — Use when filling, extracting from, merging, or splitting PDF documents or forms.
@@ -216,7 +216,7 @@ Notes:
 - If you linked the binary globally (step 2), you can use `"command": "iris-mcp"`
   with `"args": ["/path/to/iris/skills"]` instead of invoking `node` directly.
 - Set `"IRIS_NO_EXEC": "1"` in `env` to disable script execution
-  (`iris_execute_script` becomes a no-op) if you want a read-only server.
+  (`run_skill_script` becomes a no-op) if you want a read-only server.
 
 Because `iris-mcp` is a standard **stdio MCP server**, the same entry works with
 any MCP client — Codex, Cursor, Gemini CLI, and others — just drop it into that
@@ -224,9 +224,9 @@ client's MCP config.
 
 Once connected, the server exposes:
 
-- **Tools** — `iris_find(query, k?)`, `iris_load(id)`,
-  `iris_execute_script(id, script, args?)`. The Tier-1 awareness index is
-  embedded right in the `iris_find` tool description, so the agent is aware of
+- **Tools** — `find_skill(query, k?)`, `load_skill(id)`,
+  `run_skill_script(id, script, args?)`. The Tier-1 awareness index is
+  embedded right in the `find_skill` tool description, so the agent is aware of
   every skill before it ever searches.
 - **Resources** — `skill://<id>` and `skill://<id>/<ref>`.
 - **Prompts** — `iris:<skill-name>` for each skill.
@@ -242,10 +242,10 @@ With the MCP server connected, ask Claude Code to do something a skill covers:
 Here's what happens under the hood:
 
 1. **Awareness (Tier 1).** The agent already sees `git-commit-message` in the
-   `iris_find` tool description — it knows the capability exists.
-2. **Retrieval (Tier 2).** The agent calls `iris_find("write a commit message
+   `find_skill` tool description — it knows the capability exists.
+2. **Retrieval (Tier 2).** The agent calls `find_skill("write a commit message
 for staged changes")`. Iris ranks `git-commit-message` at the top.
-3. **Load (Tier 3).** The agent calls `iris_load("git-commit-message")` to pull
+3. **Load (Tier 3).** The agent calls `load_skill("git-commit-message")` to pull
    in the full instructions — only now, only this one skill.
 4. **The right skill fires.** Following the loaded steps, the agent inspects the
    staged diff and writes a clean, conventional commit message.
