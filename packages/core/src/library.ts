@@ -11,13 +11,14 @@ import {
 } from "@iris-sylvia/embeddings";
 import { scanLibrary, type ScanResult } from "./scan.js";
 import { buildTier1Index, type Tier1Options } from "./tier1.js";
+import { skillIndexText, skillTriggerText, Bm25Index } from "./ranking.js";
 import {
-  skillIndexText,
-  skillTriggerText,
-  Bm25Index,
-  combineScores,
-  type CombineWeights,
-} from "./ranking.js";
+  fuse,
+  DEFAULT_STRATEGY,
+  type RetrievalStrategy,
+  type FusionConfig,
+  type Signal,
+} from "./fusion.js";
 import { readLockfile, writeLockfile, buildLockfile } from "./lockfile-io.js";
 import { watchLibrary, type Unsubscribe } from "./watch.js";
 
@@ -28,8 +29,10 @@ export interface IrisLibraryOptions {
   provider?: EmbeddingProvider;
   /** Path for the persisted vector index; defaults to `<root>/.iris/index.json`. */
   indexPath?: string;
-  /** Optional override for the embedding/lexical blend. */
-  weights?: CombineWeights;
+  /** Retrieval strategy (dense / sparse / a fusion). Default {@link DEFAULT_STRATEGY}. */
+  strategy?: RetrievalStrategy;
+  /** Lexical weight for the convex-combo fusions (`blend`/`znorm`/`minmax`). */
+  lexicalWeight?: number;
 }
 
 interface IndexedSkill {
@@ -46,7 +49,7 @@ export class IrisLibrary {
   readonly root: string;
   private readonly provider: EmbeddingProvider;
   private readonly indexPath: string;
-  private readonly weights?: CombineWeights;
+  private readonly fusion: FusionConfig;
   private store: VectorStore;
   private indexed = new Map<string, IndexedSkill>();
   private bm25 = new Bm25Index([]);
@@ -56,7 +59,7 @@ export class IrisLibrary {
     this.root = opts.root;
     this.provider = opts.provider ?? createEmbeddingProvider();
     this.indexPath = opts.indexPath ?? join(opts.root, ".iris", "index.json");
-    this.weights = opts.weights;
+    this.fusion = { strategy: opts.strategy ?? DEFAULT_STRATEGY, lexicalWeight: opts.lexicalWeight };
     this.store = createVectorStore({ dimensions: this.provider.dimensions, path: this.indexPath });
   }
 
@@ -139,20 +142,51 @@ export class IrisLibrary {
   }
 
   private scoreAgainst(query: string, qv: number[], scope?: Set<string>): FindResult[] {
-    const scored: FindResult[] = [];
+    const signals: Signal[] = [];
+    const meta = new Map<string, Skill>();
     for (const { skill, vector } of this.indexed.values()) {
       if (scope && !scope.has(skill.id)) continue;
-      const embeddingScore = cosineSimilarity(qv, vector);
-      const lexical = this.bm25.score(query, skill.id);
-      const score = combineScores(embeddingScore, lexical, this.weights);
-      scored.push({
+      signals.push({
         id: skill.id,
+        semantic: cosineSimilarity(qv, vector),
+        lexical: this.bm25.score(query, skill.id),
+      });
+      meta.set(skill.id, skill);
+    }
+
+    const fused = fuse(signals, this.fusion);
+    const scored: FindResult[] = [];
+    for (const [id, skill] of meta) {
+      scored.push({
+        id,
         name: skill.metadata.name,
-        score,
+        score: fused.get(id) ?? 0,
         when_to_use: skill.metadata.when_to_use,
       });
     }
     return scored;
+  }
+
+  /**
+   * Raw per-skill signals (dense cosine + sparse BM25) for a query — the inputs
+   * to {@link fuse}. Exposed so the bench can sweep many fusion variants from a
+   * single embedding pass instead of re-indexing per strategy.
+   */
+  async signals(query: string, opts?: { scopeIds?: string[] }): Promise<Signal[]> {
+    if (this.indexed.size === 0 || query.trim().length === 0) return [];
+    const [queryVec] = await this.provider.embed([query]);
+    const qv = queryVec ?? [];
+    const scope = opts?.scopeIds ? new Set(opts.scopeIds) : undefined;
+    const signals: Signal[] = [];
+    for (const { skill, vector } of this.indexed.values()) {
+      if (scope && !scope.has(skill.id)) continue;
+      signals.push({
+        id: skill.id,
+        semantic: cosineSimilarity(qv, vector),
+        lexical: this.bm25.score(query, skill.id),
+      });
+    }
+    return signals;
   }
 
   /** Tier-3: return the full SKILL.md body for a skill id. */

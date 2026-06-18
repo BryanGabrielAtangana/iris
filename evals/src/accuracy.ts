@@ -87,8 +87,15 @@ export async function runAccuracy(
   // Abstention curve: fire when top score >= t. A "fire" is good only when the
   // query is a positive AND its top-1 is correct; firing on a negative or a
   // wrong positive is a false positive.
+  // Sweep thresholds across the *observed* score range rather than a fixed
+  // [0, 0.8]: RRF/hybrid scores live on a tiny scale (~0.03) where a fixed sweep
+  // collapses, while cosine is ~[0, 1]. An adaptive sweep keeps the abstention
+  // metric strategy-independent (and comparable across the bench).
+  const STEPS = 40;
+  const maxTop = Math.max(0, ...posTop.map((x) => x.score), ...negTop);
   const curve: AbstentionPoint[] = [];
-  for (let t = 0; t <= 0.8001; t += 0.05) {
+  for (let i = 0; i <= STEPS; i++) {
+    const t = (maxTop * i) / STEPS;
     let tp = 0; // fired & correct positive
     let fp = 0; // fired but negative or wrong
     for (const x of posTop) {
@@ -102,7 +109,7 @@ export async function runAccuracy(
     const precision = fired ? tp / fired : 1;
     const recall = tp / ALL_POSITIVES.length;
     const f1 = precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
-    curve.push({ threshold: round(t), precision, recall, f1 });
+    curve.push({ threshold: round4(t), precision, recall, f1 });
   }
   const bestF1 = curve.reduce((a, b) => (b.f1 > a.f1 ? b : a), curve[0]!);
 
@@ -121,7 +128,7 @@ export async function runAccuracy(
   };
 }
 
-const round = (x: number) => Math.round(x * 100) / 100;
+const round4 = (x: number) => Math.round(x * 10000) / 10000;
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 
 export function formatReport(r: AccuracyReport): string {

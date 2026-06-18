@@ -141,38 +141,55 @@ the semantic-only subset, added in Task 0 hardening) failed automatically at
 61.1% and blocked the merge — the measurement infrastructure did its job.
 **Decision: keep the blob baseline; PR closed.**
 
-## 9. Remaining tasks (targets derived from the recorded baseline)
+## 9. Task 3 (fusion bench-off) — **RRF lost; a lighter blend won**
 
-- **Task 2 — BM25 lexical — DONE (in review).** Replaced raw token-coverage with
-  corpus-aware BM25 (IDF + length norm, stopwords; name signal folded in as a
-  field weight). Lexical-engine overall acc@1 85.7% → **87.5%**; BM25 is exactly
-  0 on no-overlap queries (rejection floor). Regression test extended: **BM25-only
-  stays ≤ 40%** on the semantic-only subset (measured 33.3%). Enables strategy (1)
-  and feeds the hybrid.
-- **Task 3 — RRF fusion + the 3-way bench (§7):** remove the cross-scale 0.6/0.4
-  blend; pick the default empirically (subsumes the old model bench: MiniLM vs
-  bge-small vs e5-small).
-- **Task 1 — calibrated abstention:** lift negative rejection **67% → ≥90%**
+The handoff prescribed replacing the linear blend with **RRF**. The bench
+(`evals benchoff`, all variants on MiniLM, CI) says don't — and shows the right
+move was simpler: **drop the lexical weight 0.4 → 0.3.**
+
+| fusion (MiniLM, CI) | full acc@1 | sem-only | exact-vocab | neg-reject | absF1 |
+| ------------------- | ---------- | -------- | ----------- | ---------- | ----- |
+| semantic            | 93.8%      | 66.7%    | 100%        | 94.2%      | 0.926 |
+| bm25                | 86.6%      | 33.3%    | 100%        | 92.3%      | 0.854 |
+| **blend@.3 (win)**  | **95.5%**  | **83.3%**| 100%        | 86.5%      | 0.910 |
+| blend@.4            | 94.6%      | 77.8%    | 100%        | 90.4%      | 0.903 |
+| znorm@.4            | 93.8%      | 77.8%    | 100%        | 86.5%      | 0.883 |
+| minmax@.4           | 93.8%      | 77.8%    | 100%        | 67.3%      | 0.870 |
+| **rrf**             | 92.0%      | 61.1%    | 100%        | 80.8%      | 0.856 |
+
+**Findings:** (1) **RRF is dominated** — it discards score *magnitude*, which at
+library scale carries real signal; it trails both pure semantic and every blend.
+(2) The **scale-free normalized combos (z-norm/min-max) did not beat the plain
+convex blend** — the cross-scale worry was real but minor. (3) The win was a
+**lighter lexical touch**: `0.7·cosine + 0.3·BM25` recovers the blob-baseline
+peak (95.5% / 83.3%) — BM25 helps as a complement but over-weighting it drags the
+dense ranking down. **Default set to `blend@.3` by data.** Its one soft spot,
+rejection (86.5%), is Task 1's target.
+
+## 10. Remaining tasks
+
+- **Task 1 — calibrated abstention:** lift negative rejection toward **≥90%**
   using top-1 absolute + top1→top2 margin + background z-score; surface
-  `confidence` + `noStrongMatch` on `find_skill`; keep overall acc@1 ≥93%. Tuned
-  on the Task 3 winner.
-- **Task 6 — content-hash embedding cache:** resolve vestigial persistence; also
-  fixes the CI model-cache path warning.
+  `confidence` + `noStrongMatch` on `find_skill`; keep overall acc@1 ≥95%. Tuned
+  on `blend@.3`'s score distribution.
+- **Model sweep (was Task 5):** MiniLM vs bge-small-en-v1.5 vs e5-small-v2 — needs
+  query/passage-prefix plumbing + multi-model caching; split out to avoid a
+  3-download 429 storm on every push.
+- **Task 6 (content-hash cache):** the **CI model-cache half is DONE** (pinned
+  `IRIS_MODEL_CACHE`, conditional save, retries — CI now measures semantic
+  reliably). The embedding-cache half (skip re-embedding unchanged skills on
+  load) remains.
 
-## 10. Known issues
+## 11. Known issues
 
-- CI model-cache path is slightly off (`HF_HOME` vs transformers.js's real cache
-  dir) → harmless "path doesn't exist" warning; download still works (~6s).
-  Fixed by Task 6.
 - The combined lexical engine sits at 38.9% on the semantic-only subset (gate is
-  ≤40%) — passing but tight. A handful of paraphrases legitimately share one
-  content word with their skill; growing the subset toward ~40 cases (with CI
+  ≤40%) — passing but tight. Growing the subset toward ~40 cases (with CI
   validation of the semantic floor) is tracked as Task 0 residual.
 
 ---
 
-**Bottom line:** the ruler is honest enough that it **rejected a predicted win**
-(Task 4) on the metric that matters — that is the system working. The blob remains
-the dense representation; BM25 now backs the lexical side. The next lever for
-_consistency_ is the **hybrid RRF bench-off** (Task 3), then calibrated abstention
-(Task 1) tuned on whatever ranker wins.
+**Bottom line:** the ruler keeps overruling the plan, which is the point. It
+**rejected a predicted win** (per-field, Task 4) and a **prescribed mechanism**
+(RRF, Task 3), and the data pointed to a simpler lever — `blend@.3`, which
+restores the 95.5% / 83.3% peak. Dense blob + light BM25 is the ranker; calibrated
+abstention (Task 1) is the next lever for _consistency_.
