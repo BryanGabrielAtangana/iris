@@ -95,9 +95,16 @@ importers:
       remark-parse:
         specifier: ^11.0.0
         version: 11.0.0
+      semver:
+        specifier: ^7.6.0
+        version: 7.8.4
       unified:
         specifier: ^11.0.5
         version: 11.0.5
+    devDependencies:
+      '@types/semver':
+        specifier: ^7.5.0
+        version: 7.7.1
 
   packages/embeddings:
     dependencies:
@@ -978,6 +985,9 @@ packages:
 
   '@types/node@22.19.21':
     resolution: {integrity: sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA==}
+
+  '@types/semver@7.7.1':
+    resolution: {integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==}
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
@@ -3318,6 +3328,8 @@ snapshots:
   '@types/node@22.19.21':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/semver@7.7.1': {}
 
   '@types/unist@3.0.3': {}
 

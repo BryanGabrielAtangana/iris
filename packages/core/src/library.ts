@@ -85,22 +85,49 @@ export class IrisLibrary {
     return this.errors;
   }
 
-  /** Build the Tier-1 awareness mini-index for the loaded skills. */
-  buildTier1Index(opts?: Tier1Options): string {
-    return buildTier1Index(this.skills(), opts);
+  /**
+   * Build the Tier-1 awareness mini-index. When `scopeIds` is given (Mode B),
+   * only the loadout's skills are listed.
+   */
+  buildTier1Index(opts?: Tier1Options & { scopeIds?: string[] }): string {
+    const skills = opts?.scopeIds
+      ? this.skills().filter((s) => opts.scopeIds!.includes(s.id))
+      : this.skills();
+    return buildTier1Index(skills, opts);
   }
 
   /**
    * Tier-2 retrieval: embed the query, score every skill with a hybrid of
    * embedding cosine and lexical overlap, and return the top-k ranked results.
+   *
+   * Pass `scopeIds` to bound discovery to a loadout (Mode B). If nothing in the
+   * scope matches and `allowBroaden` is set, retrieval falls back to the full
+   * library.
    */
-  async find(query: string, k = 5): Promise<FindResult[]> {
+  async find(
+    query: string,
+    k = 5,
+    opts?: { scopeIds?: string[]; allowBroaden?: boolean },
+  ): Promise<FindResult[]> {
     if (this.indexed.size === 0 || query.trim().length === 0) return [];
     const [queryVec] = await this.provider.embed([query]);
     const qv = queryVec ?? [];
 
+    const scopeSet = opts?.scopeIds ? new Set(opts.scopeIds) : undefined;
+    let scored = this.scoreAgainst(query, qv, scopeSet);
+
+    // Bounded discovery found nothing; broaden to the full library if allowed.
+    if (scopeSet && scored.length === 0 && opts?.allowBroaden) {
+      scored = this.scoreAgainst(query, qv, undefined);
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, Math.max(0, k));
+  }
+
+  private scoreAgainst(query: string, qv: number[], scope?: Set<string>): FindResult[] {
     const scored: FindResult[] = [];
     for (const { skill, vector } of this.indexed.values()) {
+      if (scope && !scope.has(skill.id)) continue;
       const embeddingScore = cosineSimilarity(qv, vector);
       const lexical = lexicalScore(query, skill);
       const score = combineScores(embeddingScore, lexical, this.weights);
@@ -111,8 +138,7 @@ export class IrisLibrary {
         when_to_use: skill.metadata.when_to_use,
       });
     }
-    scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, Math.max(0, k));
+    return scored;
   }
 
   /** Tier-3: return the full SKILL.md body for a skill id. */

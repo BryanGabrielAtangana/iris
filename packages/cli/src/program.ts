@@ -6,6 +6,7 @@ import { removeCommand } from "./commands/remove.js";
 import { searchCommand } from "./commands/search.js";
 import { syncCommand } from "./commands/sync.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { lockCommand } from "./commands/lock.js";
 
 const VERSION = "0.1.0";
 
@@ -44,9 +45,17 @@ export function buildProgram(): Command {
     .description("Search the library (Tier-2 retrieval)")
     .argument("<query...>", "Your task or intent")
     .option("-k, --k <n>", "Number of results", "5")
-    .action((query: string[], cmdOpts: { k?: string }) =>
+    .option("-s, --scope", "Bound the search to the iris.json loadout")
+    .option("-m, --manifest <path>", "Loadout manifest to scope by (implies --scope)")
+    .action((query: string[], cmdOpts: { k?: string; scope?: boolean; manifest?: string }) =>
       searchCommand(query.join(" "), { ...program.opts(), ...cmdOpts }),
     );
+
+  program
+    .command("lock")
+    .description("Resolve the iris.json loadout and pin it into iris.lock (Mode B)")
+    .option("-m, --manifest <path>", "Loadout manifest (default: <library>/iris.json)")
+    .action((cmdOpts: { manifest?: string }) => lockCommand({ ...program.opts(), ...cmdOpts }));
 
   program
     .command("sync")
