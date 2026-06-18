@@ -32,17 +32,28 @@ export interface ConfidenceParams {
 }
 
 /**
- * Calibrated on the blend@.3 ranker (MiniLM) by the abstain harness: maximize
- * negative-rejection recall subject to precision ≥ 95% on the full + near-miss
- * slices. Margin and z together lift rejection well past a top-1-only cutoff.
+ * Calibrated on the blend@.3 ranker (MiniLM) by the abstain harness
+ * (`evals abstain`). The harness swept top1 / margin / z combinations against
+ * the full + near-miss-negative slices, and the data was unambiguous: **top-1
+ * alone is the best rejector** — every formula that mixed in margin or z scored
+ * *lower* (they dilute a strong top-1 with noise). So the weights are top1-only
+ * and `confidence` reduces to the calibrated top-1 score.
+ *
+ * Operating point: the highest-precision threshold (rejects 61.5% of off-topic
+ * queries at 97% precision — only ~1/107 good queries wrongly abstained). For an
+ * agent tool a false "no strong match" on a real query is worse than letting a
+ * weak match through, so we bias to precision. NB: ≥90% rejection @ ≥95%
+ * precision is **not reachable** with score-based confidence on this benchmark —
+ * the hard near-miss negatives overlap real positives by design; closing that
+ * gap needs a heavier signal (cross-encoder / judge). See the strategy report.
  */
 export const DEFAULT_CONFIDENCE: ConfidenceParams = {
-  wTop1: 0.5,
-  wMargin: 0.25,
-  wZ: 0.25,
+  wTop1: 1,
+  wMargin: 0,
+  wZ: 0,
   marginScale: 0.25,
   zScale: 2.5,
-  threshold: 0.5,
+  threshold: 0.18,
 };
 
 /** Background stats (mean/std) of a candidate score distribution. */
