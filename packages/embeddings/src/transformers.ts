@@ -4,11 +4,19 @@ import { type EmbeddingProvider, normalize } from "./provider.js";
 /** Quantization for the ONNX weights. transformers.js `dtype`. */
 export type Quantization = "fp32" | "fp16" | "q8" | "q4";
 
+/** Sentence-embedding pooling. Model-specific: bge=cls, e5/nomic/MiniLM=mean. */
+export type Pooling = "mean" | "cls";
+
 export interface TransformersOptions {
   /** Hugging Face model id. Default: a small, fast sentence-embedding model. */
   model?: string;
   /** Output dimensionality (must match the model, or {@link truncateDim}). */
   dimensions?: number;
+  /**
+   * Pooling over token embeddings. **Per model** — a uniform `mean` silently
+   * handicaps CLS-pooled models like bge. Default `mean`.
+   */
+  pooling?: Pooling;
   /**
    * Prefix prepended to *query* texts (asymmetric models). Empty for symmetric
    * models like MiniLM. E.g. e5 uses `"query: "`, bge an instruction sentence.
@@ -48,6 +56,7 @@ export class TransformersEmbeddingProvider implements EmbeddingProvider {
   private readonly documentPrefix: string;
   private readonly truncateDim?: number;
   private readonly dtype: Quantization;
+  private readonly pooling: Pooling;
   // Lazily-initialized feature-extraction pipeline.
   private extractor:
     | ((texts: string[], opts: object) => Promise<{ tolist(): number[][] }>)
@@ -59,6 +68,7 @@ export class TransformersEmbeddingProvider implements EmbeddingProvider {
     this.documentPrefix = opts.documentPrefix ?? "";
     this.truncateDim = opts.truncateDim;
     this.dtype = opts.dtype ?? "q8";
+    this.pooling = opts.pooling ?? "mean";
     this.dimensions = opts.truncateDim ?? opts.dimensions ?? 384;
     this.name = `transformers:${this.model}`;
   }
@@ -88,14 +98,14 @@ export class TransformersEmbeddingProvider implements EmbeddingProvider {
   /** Force the model to load (used to decide fallback before indexing). */
   async warm(): Promise<void> {
     const extractor = await this.ensure();
-    await extractor(["warmup"], { pooling: "mean", normalize: true });
+    await extractor(["warmup"], { pooling: this.pooling, normalize: true });
   }
 
   private async run(texts: string[], prefix: string): Promise<number[][]> {
     if (texts.length === 0) return [];
     const extractor = await this.ensure();
     const input = prefix ? texts.map((t) => prefix + t) : texts;
-    const output = await extractor(input, { pooling: "mean", normalize: true });
+    const output = await extractor(input, { pooling: this.pooling, normalize: true });
     return output.tolist().map((v) => {
       const arr = Array.from(v);
       // Re-normalize defensively so cosine == dot product downstream; for MRL

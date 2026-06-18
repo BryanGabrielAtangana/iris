@@ -36,11 +36,13 @@ export const MODEL_SLATE: ModelSpec[] = [
     model: "Xenova/bge-small-en-v1.5",
     nativeDim: 384,
     sizeClass: "XS",
-    // bge-small uses a query instruction; documents get no prefix.
+    // bge-small uses a query instruction; documents get no prefix. bge is
+    // CLS-pooled — mean pooling silently handicaps it (the v0.4 sweep bug).
     queryPrefix: "Represent this sentence for searching relevant passages: ",
     documentPrefix: "",
+    pooling: "cls",
     dtype: "q8",
-    note: "drop-in dim; asymmetric query instruction",
+    note: "drop-in dim; asymmetric query instruction; CLS-pooled",
   },
   {
     key: "e5-small",
