@@ -1,0 +1,62 @@
+name: model sweep
+
+# Heavy, opt-in: downloads several embedding models. Runs ONLY on manual
+# dispatch (and a weekly cron), never on push, so the normal CI stays fast and
+# we don't hammer Hugging Face (429) on every commit. Each model is a separate,
+# cost-isolated job with its own cache key.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    name: sweep / ${{ matrix.model }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [minilm, bge-small, e5-small, nomic, embeddinggemma]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # Per-model cache so each model downloads at most once. Restore/save split
+      # with an ONNX-present guard so a failed/partial fetch never poisons the key.
+      - name: Restore model cache
+        id: model-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.model-cache
+          key: iris-model-${{ matrix.model }}-onnx-v1
+
+      - name: Run sweep (${{ matrix.model }})
+        env:
+          IRIS_MODEL_CACHE: ${{ github.workspace }}/.model-cache
+          MODEL_KEY: ${{ matrix.model }}
+        run: pnpm --filter @iris-sylvia/evals sweep
+
+      - name: Save model cache
+        if: >-
+          steps.model-cache.outputs.cache-hit != 'true' &&
+          hashFiles(format('{0}/.model-cache/**/*.onnx', github.workspace)) != ''
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.model-cache
+          key: iris-model-${{ matrix.model }}-onnx-v1

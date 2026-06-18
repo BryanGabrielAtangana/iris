@@ -10,8 +10,19 @@ export interface EmbeddingProvider {
   readonly name: string;
   /** Output vector dimensionality. Stable for a given provider instance. */
   readonly dimensions: number;
-  /** Embed a batch of texts into unit-normalized vectors. */
+  /** Embed a batch of *documents* into unit-normalized vectors. */
   embed(texts: string[]): Promise<number[][]>;
+  /**
+   * Embed a batch of *queries*. Optional: asymmetric models (e5, bge, nomic)
+   * prepend a different prefix to queries than documents. Symmetric providers
+   * omit this, and {@link embedQueries} falls back to {@link embed}.
+   */
+  embedQuery?(texts: string[]): Promise<number[][]>;
+}
+
+/** Embed queries via the provider's query path, falling back to `embed`. */
+export function embedQueries(provider: EmbeddingProvider, texts: string[]): Promise<number[][]> {
+  return provider.embedQuery ? provider.embedQuery(texts) : provider.embed(texts);
 }
 
 /** Cosine similarity of two equal-length vectors. Assumes finite values. */

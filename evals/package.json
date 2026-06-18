@@ -14,7 +14,8 @@
     "clean": "rm -rf dist .turbo",
     "accuracy": "tsx src/accuracy.ts",
     "benchoff": "tsx src/bench.ts",
-    "abstain": "tsx src/abstain.ts"
+    "abstain": "tsx src/abstain.ts",
+    "sweep": "tsx src/sweep.ts"
   },
   "dependencies": {
     "@iris-sylvia/core": "workspace:*",
