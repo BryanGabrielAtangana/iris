@@ -15,8 +15,10 @@ import {
   skillIndexText,
   skillTriggerText,
   Bm25Index,
-  combineScores,
-  type CombineWeights,
+  rrfFuse,
+  DEFAULT_STRATEGY,
+  type RetrievalStrategy,
+  type Scored,
 } from "./ranking.js";
 import { readLockfile, writeLockfile, buildLockfile } from "./lockfile-io.js";
 import { watchLibrary, type Unsubscribe } from "./watch.js";
@@ -28,8 +30,8 @@ export interface IrisLibraryOptions {
   provider?: EmbeddingProvider;
   /** Path for the persisted vector index; defaults to `<root>/.iris/index.json`. */
   indexPath?: string;
-  /** Optional override for the embedding/lexical blend. */
-  weights?: CombineWeights;
+  /** Retrieval strategy: dense, sparse (BM25), or RRF hybrid. Default hybrid. */
+  strategy?: RetrievalStrategy;
 }
 
 interface IndexedSkill {
@@ -46,7 +48,7 @@ export class IrisLibrary {
   readonly root: string;
   private readonly provider: EmbeddingProvider;
   private readonly indexPath: string;
-  private readonly weights?: CombineWeights;
+  private readonly strategy: RetrievalStrategy;
   private store: VectorStore;
   private indexed = new Map<string, IndexedSkill>();
   private bm25 = new Bm25Index([]);
@@ -56,7 +58,7 @@ export class IrisLibrary {
     this.root = opts.root;
     this.provider = opts.provider ?? createEmbeddingProvider();
     this.indexPath = opts.indexPath ?? join(opts.root, ".iris", "index.json");
-    this.weights = opts.weights;
+    this.strategy = opts.strategy ?? DEFAULT_STRATEGY;
     this.store = createVectorStore({ dimensions: this.provider.dimensions, path: this.indexPath });
   }
 
@@ -139,16 +141,35 @@ export class IrisLibrary {
   }
 
   private scoreAgainst(query: string, qv: number[], scope?: Set<string>): FindResult[] {
-    const scored: FindResult[] = [];
+    // Gather both signals per in-scope skill, then resolve a final score by the
+    // configured strategy. `semantic`/`bm25` use the raw [0,1] score; `hybrid`
+    // fuses the two rankings by rank (RRF), which is scale-free.
+    const semantic: Scored[] = [];
+    const lexical: Scored[] = [];
+    const meta = new Map<string, Skill>();
     for (const { skill, vector } of this.indexed.values()) {
       if (scope && !scope.has(skill.id)) continue;
-      const embeddingScore = cosineSimilarity(qv, vector);
-      const lexical = this.bm25.score(query, skill.id);
-      const score = combineScores(embeddingScore, lexical, this.weights);
+      semantic.push({ id: skill.id, score: cosineSimilarity(qv, vector) });
+      lexical.push({ id: skill.id, score: this.bm25.score(query, skill.id) });
+      meta.set(skill.id, skill);
+    }
+
+    const finalScore = new Map<string, number>();
+    if (this.strategy === "semantic") {
+      for (const s of semantic) finalScore.set(s.id, s.score);
+    } else if (this.strategy === "bm25") {
+      for (const s of lexical) finalScore.set(s.id, s.score);
+    } else {
+      const fused = rrfFuse([semantic, lexical]);
+      for (const [id, score] of fused) finalScore.set(id, score);
+    }
+
+    const scored: FindResult[] = [];
+    for (const [id, skill] of meta) {
       scored.push({
-        id: skill.id,
+        id,
         name: skill.metadata.name,
-        score,
+        score: finalScore.get(id) ?? 0,
         when_to_use: skill.metadata.when_to_use,
       });
     }

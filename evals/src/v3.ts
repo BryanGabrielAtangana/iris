@@ -214,6 +214,30 @@ export const AMBIGUOUS: EvalCase[] = [
   { query: "transform and clean this dataset", expected: ["csv-wrangler", "json-transformer"] },
 ];
 
+/**
+ * EXACT_VOCABULARY: the mirror image of SEMANTIC_ONLY — queries that use the
+ * skill's *literal* jargon / surface form. BM25 should shine here; the bench
+ * reports this slice separately to confirm a hybrid ranker keeps the lexical
+ * win it should already get, rather than averaging it away.
+ */
+export const EXACT_VOCABULARY: EvalCase[] = [
+  { query: "write a git commit message", expected: "git-commit-message" },
+  { query: "fill out a pdf form", expected: "pdf-forms" },
+  { query: "add a changelog entry", expected: "changelog-update" },
+  { query: "build a regex pattern", expected: "regex-builder" },
+  { query: "write a sql migration to add a column", expected: "sql-migration" },
+  { query: "remove duplicate rows from a csv", expected: "csv-wrangler" },
+  { query: "mock a rest api endpoint", expected: "api-mock-server" },
+  { query: "write a dockerfile for my app", expected: "dockerfile-author" },
+  { query: "scrape product prices from a website", expected: "web-scraper" },
+  { query: "resize and convert an image", expected: "image-resizer" },
+  { query: "transform and flatten a json object", expected: "json-transformer" },
+  { query: "load environment variables from a .env config", expected: "env-config" },
+  { query: "make an http request to an api", expected: "http-request" },
+  { query: "generate a markdown table of contents", expected: "markdown-toc" },
+  { query: "schedule a cron job", expected: "cron-scheduler" },
+];
+
 /** Out-of-domain — nothing in the library handles these. */
 export const NEGATIVES_OOD: string[] = [
   "what's the weather going to be tomorrow",

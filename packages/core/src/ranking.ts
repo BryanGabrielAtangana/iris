@@ -146,14 +146,20 @@ export class Bm25Index {
   }
 }
 
+/** @deprecated The cross-scale linear blend; superseded by {@link rrfFuse}. */
 export interface CombineWeights {
   embedding: number;
   lexical: number;
 }
 
+/** @deprecated Weights for the retired linear blend. */
 export const DEFAULT_WEIGHTS: CombineWeights = { embedding: 0.6, lexical: 0.4 };
 
-/** Combine a (non-negative) embedding cosine and a lexical score into [0, 1]. */
+/**
+ * @deprecated Linear cosine+lexical blend, retired in favor of {@link rrfFuse}
+ * (rank fusion) because cosine and BM25 live on different scales. Kept for the
+ * bench-off baseline only.
+ */
 export function combineScores(
   embeddingScore: number,
   lexical: number,
@@ -167,4 +173,42 @@ export function combineScores(
 export function clamp01(x: number): number {
   if (Number.isNaN(x)) return 0;
   return Math.max(0, Math.min(1, x));
+}
+
+/** Retrieval strategy: dense only, sparse only, or their rank fusion. */
+export type RetrievalStrategy = "semantic" | "bm25" | "hybrid";
+
+/**
+ * Provisional default. The production default is chosen empirically by the
+ * strategy×model×subset bench-off (Task 3); until that lands it stays on the
+ * proven dense engine, whose scores are already on the [0,1] scale the
+ * abstention/floor gates assume.
+ */
+export const DEFAULT_STRATEGY: RetrievalStrategy = "semantic";
+
+/** Constant in the RRF denominator. 60 is the standard value from the literature. */
+export const RRF_K = 60;
+
+export interface Scored {
+  id: string;
+  score: number;
+}
+
+/**
+ * Reciprocal Rank Fusion: combine several rankings by **rank, not raw score**
+ * (`Σ 1/(k + rank)`). Scale-free, so it sidesteps the core flaw of the old
+ * `0.6·cosine + 0.4·lexical` blend — cosine and BM25 live on different scales,
+ * and a fixed linear mix lets whichever has the larger numbers dominate. RRF
+ * only cares about position, so a skill ranked #1 by either signal is rewarded
+ * and one ranked highly by *both* wins.
+ */
+export function rrfFuse(rankings: Scored[][], k = RRF_K): Map<string, number> {
+  const fused = new Map<string, number>();
+  for (const ranking of rankings) {
+    const ordered = [...ranking].sort((a, b) => b.score - a.score);
+    ordered.forEach((item, i) => {
+      fused.set(item.id, (fused.get(item.id) ?? 0) + 1 / (k + i + 1));
+    });
+  }
+  return fused;
 }

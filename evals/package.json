@@ -12,7 +12,8 @@
     "lint": "eslint src",
     "bench": "tsx src/run.ts",
     "clean": "rm -rf dist .turbo",
-    "accuracy": "tsx src/accuracy.ts"
+    "accuracy": "tsx src/accuracy.ts",
+    "benchoff": "tsx src/bench.ts"
   },
   "dependencies": {
     "@iris-sylvia/core": "workspace:*",
