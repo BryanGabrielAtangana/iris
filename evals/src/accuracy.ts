@@ -9,24 +9,45 @@ import {
   type EmbeddingProvider,
 } from "@iris-sylvia/embeddings";
 import { evaluate, type Metrics } from "./runner.js";
-import { HARD_CASES, NEGATIVE_QUERIES } from "./hard.js";
+import { matchesExpected, type EvalCase } from "./dataset.js";
+import {
+  POSITIVES,
+  AMBIGUOUS,
+  SEMANTIC_ONLY,
+  NEGATIVES_OOD,
+  NEGATIVES_NEARMISS,
+} from "./v3.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_SKILLS_DIR = resolve(join(here, "..", "..", "skills"));
 
+const ALL_POSITIVES: EvalCase[] = [...POSITIVES, ...AMBIGUOUS];
+const ALL_NEGATIVES: string[] = [...NEGATIVES_OOD, ...NEGATIVES_NEARMISS];
+
+export interface AbstentionPoint {
+  threshold: number;
+  precision: number;
+  recall: number;
+  f1: number;
+}
+
 export interface AccuracyReport {
   provider: string;
-  hard: Metrics;
-  /** Mean top-1 score on correct positives (confidence on the right answer). */
+  /** Metrics over all positives (incl. ambiguous, any-of accepted). */
+  positives: Metrics;
+  /** acc@1 over the semantic-only subset (the gate metric). */
+  semanticOnlyTop1: number;
+  /** Mean top score on positives whose top-1 is correct. */
   positiveMeanScore: number;
-  /** Mean top score on out-of-domain queries (lower is better). */
+  /** Mean top score on negatives (lower is better). */
   negativeMeanScore: number;
-  /** Fraction of negatives whose top score is below `threshold` (correctly quiet). */
+  /** Fraction of negatives whose top score is below `threshold`. */
   negativeRejectionRate: number;
-  /** Fraction of hard positives that are top-1 AND above `threshold`. */
-  confidentTop1: number;
   threshold: number;
-  /** Median find() latency in ms. */
+  /** Abstention precision/recall sweep over the top-1 score. */
+  curve: AbstentionPoint[];
+  /** Operating point with the best F1 from the sweep. */
+  bestF1: AbstentionPoint;
   medianLatencyMs: number;
 }
 
@@ -39,70 +60,88 @@ export async function runAccuracy(
   const lib = new IrisLibrary({ root: skillsDir, provider: p });
   await lib.load();
 
-  const hard = await evaluate(lib, HARD_CASES);
+  const positives = await evaluate(lib, ALL_POSITIVES);
+  const semanticOnly = await evaluate(lib, SEMANTIC_ONLY);
 
-  // Confidence on positives + latency.
+  // Collect top-1 (id, score, correct) for positives, and top score for negatives.
+  const posTop: { score: number; correct: boolean }[] = [];
   const latencies: number[] = [];
-  let posScoreSum = 0;
-  let confident = 0;
-  for (const c of HARD_CASES) {
+  for (const c of ALL_POSITIVES) {
     const t0 = performance.now();
-    const results = await lib.find(c.query, 5);
+    const r = await lib.find(c.query, 5);
     latencies.push(performance.now() - t0);
-    const top = results[0];
-    if (top?.id === c.expected) {
-      posScoreSum += top.score;
-      if (top.score >= threshold) confident++;
-    }
+    const top = r[0];
+    posTop.push({ score: top?.score ?? 0, correct: !!top && matchesExpected(c.expected, top.id) });
+  }
+  const negTop: number[] = [];
+  for (const q of ALL_NEGATIVES) {
+    const r = await lib.find(q, 5);
+    negTop.push(r[0]?.score ?? 0);
   }
 
-  // Negatives: top score should be low.
-  let negScoreSum = 0;
-  let rejected = 0;
-  for (const q of NEGATIVE_QUERIES) {
-    const results = await lib.find(q, 5);
-    const top = results[0]?.score ?? 0;
-    negScoreSum += top;
-    if (top < threshold) rejected++;
+  const correctScores = posTop.filter((x) => x.correct).map((x) => x.score);
+  const positiveMeanScore = correctScores.reduce((s, x) => s + x, 0) / (correctScores.length || 1);
+  const negativeMeanScore = negTop.reduce((s, x) => s + x, 0) / (negTop.length || 1);
+  const negativeRejectionRate = negTop.filter((x) => x < threshold).length / (negTop.length || 1);
+
+  // Abstention curve: fire when top score >= t. A "fire" is good only when the
+  // query is a positive AND its top-1 is correct; firing on a negative or a
+  // wrong positive is a false positive.
+  const curve: AbstentionPoint[] = [];
+  for (let t = 0; t <= 0.8001; t += 0.05) {
+    let tp = 0; // fired & correct positive
+    let fp = 0; // fired but negative or wrong
+    for (const x of posTop) {
+      if (x.score >= t) {
+        if (x.correct) tp++;
+        else fp++;
+      }
+    }
+    for (const s of negTop) if (s >= t) fp++;
+    const fired = tp + fp;
+    const precision = fired ? tp / fired : 1;
+    const recall = tp / ALL_POSITIVES.length;
+    const f1 = precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
+    curve.push({ threshold: round(t), precision, recall, f1 });
   }
+  const bestF1 = curve.reduce((a, b) => (b.f1 > a.f1 ? b : a), curve[0]!);
 
   latencies.sort((a, b) => a - b);
-  const median = latencies[Math.floor(latencies.length / 2)] ?? 0;
-
   return {
     provider: p.name,
-    hard,
-    positiveMeanScore: posScoreSum / HARD_CASES.length,
-    negativeMeanScore: negScoreSum / NEGATIVE_QUERIES.length,
-    negativeRejectionRate: rejected / NEGATIVE_QUERIES.length,
-    confidentTop1: confident / HARD_CASES.length,
+    positives,
+    semanticOnlyTop1: semanticOnly.top1,
+    positiveMeanScore,
+    negativeMeanScore,
+    negativeRejectionRate,
     threshold,
-    medianLatencyMs: median,
+    curve,
+    bestF1,
+    medianLatencyMs: latencies[Math.floor(latencies.length / 2)] ?? 0,
   };
 }
 
+const round = (x: number) => Math.round(x * 100) / 100;
+const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+
 export function formatReport(r: AccuracyReport): string {
-  const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
   return [
     `Provider: ${r.provider}`,
-    `HARD set (${HARD_CASES.length} paraphrased queries):`,
-    `  acc@1 ${pct(r.hard.top1)}   acc@3 ${pct(r.hard.top3)}   MRR ${r.hard.mrr.toFixed(3)}`,
-    `  confident top-1 (≥ ${r.threshold}) ${pct(r.confidentTop1)}   mean correct score ${r.positiveMeanScore.toFixed(3)}`,
-    `Negatives (${NEGATIVE_QUERIES.length} out-of-domain):`,
-    `  rejection rate (top < ${r.threshold}) ${pct(r.negativeRejectionRate)}   mean top score ${r.negativeMeanScore.toFixed(3)}`,
+    `Positives (${ALL_POSITIVES.length}):  acc@1 ${pct(r.positives.top1)}   acc@3 ${pct(r.positives.top3)}   MRR ${r.positives.mrr.toFixed(3)}`,
+    `Semantic-only (${SEMANTIC_ONLY.length}):  acc@1 ${pct(r.semanticOnlyTop1)}   ← gate: lexical must be ≤ 40%`,
+    `Negatives (${ALL_NEGATIVES.length}):  rejection@${r.threshold} ${pct(r.negativeRejectionRate)}   mean top ${r.negativeMeanScore.toFixed(3)}   (pos mean ${r.positiveMeanScore.toFixed(3)})`,
+    `Best abstention F1: ${r.bestF1.f1.toFixed(3)} at t=${r.bestF1.threshold} (P ${pct(r.bestF1.precision)} / R ${pct(r.bestF1.recall)})`,
     `Latency: median find() ${r.medianLatencyMs.toFixed(2)} ms`,
   ].join("\n");
 }
 
 async function main(): Promise<void> {
   const dir = process.argv[2] ? resolve(process.argv[2]) : DEFAULT_SKILLS_DIR;
-  process.stdout.write(`Iris search-accuracy report\nLibrary: ${dir}\n\n`);
+  process.stdout.write(`Iris search-accuracy report (v0.3 dataset)\nLibrary: ${dir}\n\n`);
 
-  // Lexical baseline.
   const lexical = await runAccuracy(createEmbeddingProvider({ kind: "local" }), dir);
   process.stdout.write(formatReport(lexical) + "\n\n");
 
-  // Semantic (transformers.js), or a graceful fallback when the model can't load.
   const semanticProvider = await resolveDefaultProvider({
     onFallback: (r) => process.stderr.write(`[accuracy] ${r}\n`),
   });
@@ -110,12 +149,16 @@ async function main(): Promise<void> {
   process.stdout.write(formatReport(semantic) + "\n");
 
   if (semantic.provider !== lexical.provider) {
-    const dAcc = ((semantic.hard.top1 - lexical.hard.top1) * 100).toFixed(1);
-    const dRej = ((semantic.negativeRejectionRate - lexical.negativeRejectionRate) * 100).toFixed(
-      1,
-    );
+    const d = (a: number, b: number) => `${((a - b) * 100).toFixed(1)} pts`;
     process.stdout.write(
-      `\nSemantic vs lexical: acc@1 ${dAcc} pts, negative rejection ${dRej} pts.\n`,
+      `\nSemantic vs lexical:` +
+        `  semantic-only acc@1 ${d(semantic.semanticOnlyTop1, lexical.semanticOnlyTop1)},` +
+        `  overall acc@1 ${d(semantic.positives.top1, lexical.positives.top1)},` +
+        `  negative rejection ${d(semantic.negativeRejectionRate, lexical.negativeRejectionRate)}.\n`,
+    );
+  } else {
+    process.stderr.write(
+      `\n[accuracy] semantic engine unavailable here — both rows are the lexical fallback.\n`,
     );
   }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { FindResult } from "@iris-sylvia/core";
-import { DATASET, type EvalCase } from "./dataset.js";
+import { DATASET, matchesExpected, type EvalCase } from "./dataset.js";
 
 export interface Metrics {
   total: number;
@@ -23,7 +23,7 @@ export async function evaluate(
   let rrSum = 0;
   for (const c of cases) {
     const results = await retriever.find(c.query, 5);
-    const rank = results.findIndex((r) => r.id === c.expected); // 0-based, -1 if absent
+    const rank = results.findIndex((r) => matchesExpected(c.expected, r.id)); // 0-based, -1 if absent
     if (rank === 0) top1++;
     if (rank >= 0 && rank < 3) top3++;
     if (rank >= 0) rrSum += 1 / (rank + 1);

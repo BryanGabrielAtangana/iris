@@ -1,9 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
-/** A labeled retrieval example: a user query and the skill that should win. */
+/**
+ * A labeled retrieval example: a user query and the skill(s) that should win.
+ * `expected` may be an array for ambiguous queries that legitimately match more
+ * than one skill (any of them counts as correct at acc@1).
+ */
 export interface EvalCase {
   query: string;
-  expected: string; // skill id
+  expected: string | string[];
+}
+
+/** True when `id` satisfies a case's expectation (single id or any-of array). */
+export function matchesExpected(expected: string | string[], id: string): boolean {
+  return Array.isArray(expected) ? expected.includes(id) : expected === id;
 }
 
 /**
