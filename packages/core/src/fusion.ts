@@ -28,7 +28,15 @@ export interface FusionConfig {
   rrfK?: number;
 }
 
-export const DEFAULT_LEXICAL_WEIGHT = 0.4;
+/**
+ * Lexical weight for the convex-combo fusions. 0.3 (i.e. 0.7·cosine + 0.3·BM25)
+ * won the fusion bench-off on MiniLM: full acc@1 95.5%, semantic-only 83.3% —
+ * the best of every variant tried (blend weight sweep, z-norm/min-max
+ * normalized combos, and RRF). A *lighter* lexical touch beats a heavier one:
+ * BM25 helps when it complements cosine, but over-weighting it drags the dense
+ * ranking down.
+ */
+export const DEFAULT_LEXICAL_WEIGHT = 0.3;
 
 function meanStd(xs: number[]): { mean: number; std: number } {
   const n = xs.length || 1;
@@ -83,8 +91,9 @@ export function fuse(signals: Signal[], cfg: FusionConfig): Map<string, number> 
 }
 
 /**
- * Provisional default. The production default is chosen empirically by the
- * fusion bench-off (`evals benchoff`); until that lands it stays on the proven
- * dense engine, whose scores are already on the [0,1] scale the gates assume.
+ * Production default, chosen by the fusion bench-off (`evals benchoff`):
+ * `blend` at {@link DEFAULT_LEXICAL_WEIGHT}. It led every variant on full-set
+ * acc@1 (95.5%) and semantic-only (83.3%) on MiniLM. RRF and the normalized
+ * combos (z-norm/min-max) all lost to the plain convex blend.
  */
-export const DEFAULT_STRATEGY: RetrievalStrategy = "semantic";
+export const DEFAULT_STRATEGY: RetrievalStrategy = "blend";
