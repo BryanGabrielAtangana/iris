@@ -18,9 +18,14 @@ async function main(): Promise<void> {
   const allowExec = process.env.IRIS_NO_EXEC !== "1";
   const manifestPath = process.env.IRIS_MANIFEST ? resolve(process.env.IRIS_MANIFEST) : undefined;
 
-  const { stop, scope, scopeErrors } = await startStdioServer({ root, allowExec, manifestPath });
+  const { stop, scope, scopeErrors, provider } = await startStdioServer({
+    root,
+    allowExec,
+    manifestPath,
+  });
   // Tools communicate over stdout/stdin; keep diagnostics on stderr only.
   process.stderr.write(`[iris] MCP server started for library: ${root}\n`);
+  process.stderr.write(`[iris] embeddings: ${provider}\n`);
   if (scope) {
     process.stderr.write(`[iris] scoped to loadout: ${scope.ids.length} skill(s)\n`);
     for (const e of scopeErrors ?? []) process.stderr.write(`[iris] loadout warning: ${e}\n`);

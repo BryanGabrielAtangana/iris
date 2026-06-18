@@ -9,6 +9,7 @@ import {
   createVectorStore,
   cosineSimilarity,
   MemoryVectorStore,
+  resolveDefaultProvider,
 } from "./index.js";
 
 describe("LocalHashingProvider", () => {
@@ -75,4 +76,22 @@ describe("MemoryVectorStore", () => {
     await store.remove(["a"]);
     expect(store.size()).toBe(1);
   });
+});
+
+describe("resolveDefaultProvider", () => {
+  it("returns the lexical provider when kind is local", async () => {
+    const p = await resolveDefaultProvider({ kind: "local" });
+    expect(p.name).toBe("local-hashing");
+  });
+
+  it("falls back to a working provider when the semantic model can't load", async () => {
+    // In CI / offline / firewalled environments the model download fails; the
+    // resolver must degrade to a usable provider rather than throw.
+    let fellBack = false;
+    const p = await resolveDefaultProvider({ onFallback: () => (fellBack = true) });
+    const [v] = await p.embed(["semantic search test"]);
+    expect((v ?? []).length).toBe(p.dimensions);
+    // Either the model loaded (semantic) or we fell back to lexical — never broken.
+    expect(p.name === "local-hashing" ? fellBack : true).toBe(true);
+  }, 30_000);
 });

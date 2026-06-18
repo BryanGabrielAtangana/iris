@@ -3,7 +3,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { IrisLibrary } from "@iris-sylvia/core";
-import { createEmbeddingProvider, type EmbeddingProvider } from "@iris-sylvia/embeddings";
+import {
+  createEmbeddingProvider,
+  resolveDefaultProvider,
+  type EmbeddingProvider,
+} from "@iris-sylvia/embeddings";
 import { evaluate, type Metrics } from "./runner.js";
 import { HARD_CASES, NEGATIVE_QUERIES } from "./hard.js";
 
@@ -92,9 +96,28 @@ export function formatReport(r: AccuracyReport): string {
 
 async function main(): Promise<void> {
   const dir = process.argv[2] ? resolve(process.argv[2]) : DEFAULT_SKILLS_DIR;
-  const report = await runAccuracy(undefined, dir);
   process.stdout.write(`Iris search-accuracy report\nLibrary: ${dir}\n\n`);
-  process.stdout.write(formatReport(report) + "\n");
+
+  // Lexical baseline.
+  const lexical = await runAccuracy(createEmbeddingProvider({ kind: "local" }), dir);
+  process.stdout.write(formatReport(lexical) + "\n\n");
+
+  // Semantic (transformers.js), or a graceful fallback when the model can't load.
+  const semanticProvider = await resolveDefaultProvider({
+    onFallback: (r) => process.stderr.write(`[accuracy] ${r}\n`),
+  });
+  const semantic = await runAccuracy(semanticProvider, dir);
+  process.stdout.write(formatReport(semantic) + "\n");
+
+  if (semantic.provider !== lexical.provider) {
+    const dAcc = ((semantic.hard.top1 - lexical.hard.top1) * 100).toFixed(1);
+    const dRej = ((semantic.negativeRejectionRate - lexical.negativeRejectionRate) * 100).toFixed(
+      1,
+    );
+    process.stdout.write(
+      `\nSemantic vs lexical: acc@1 ${dAcc} pts, negative rejection ${dRej} pts.\n`,
+    );
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -36,12 +36,15 @@ beforeEach(async () => {
   libRoot = await mkdtemp(join(tmpdir(), "iris-cli-"));
   prevEnv = process.env.IRIS_LIBRARY;
   process.env.IRIS_LIBRARY = libRoot;
+  // Force the lexical engine so tests are offline, fast and deterministic.
+  process.env.IRIS_EMBEDDINGS = "local";
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
   if (prevEnv === undefined) delete process.env.IRIS_LIBRARY;
   else process.env.IRIS_LIBRARY = prevEnv;
+  delete process.env.IRIS_EMBEDDINGS;
   process.exitCode = 0;
 });
 
