@@ -14,6 +14,22 @@ export interface ServerScope {
   allowBroaden?: boolean;
 }
 
+/** A structured discovery-telemetry event (find_skill / load_skill). */
+export interface DiscoveryEvent {
+  ts: string;
+  tool: "find_skill" | "load_skill";
+  /** find_skill: the query. */
+  query?: string;
+  /** find_skill: the ranked top-k (id + score + confidence). */
+  results?: { id: string; score: number; confidence?: number }[];
+  /** find_skill: top-1 confidence and whether the server abstained. */
+  confidence?: number;
+  noStrongMatch?: boolean;
+  /** load_skill: the requested id and whether a body was found. */
+  id?: string;
+  found?: boolean;
+}
+
 export interface CreateServerOptions {
   /** Allow `iris_execute_script` to run bundled scripts. Default: true. */
   allowExec?: boolean;
@@ -21,22 +37,35 @@ export interface CreateServerOptions {
   defaultK?: number;
   /** Bound discovery to a loadout (Mode B). Omit for the full library (Mode A). */
   scope?: ServerScope;
+  /**
+   * Embed the Tier-1 awareness index in the `find_skill` description. Default
+   * true. Set false for the discovery A/B "without Tier-1" arm: the tool stays
+   * available but is no longer advertised in always-loaded context.
+   */
+  awareness?: boolean;
+  /** Discovery telemetry sink — called on every find_skill / load_skill. */
+  onEvent?: (event: DiscoveryEvent) => void;
 }
 
 /** Compose the find-tool description so the Tier-1 awareness index is embedded. */
-function findDescription(lib: IrisLibrary, scope?: ServerScope): string {
-  const index = lib.buildTier1Index({ scopeIds: scope?.ids });
+function findDescription(lib: IrisLibrary, scope?: ServerScope, awareness = true): string {
   const intro = scope
     ? "Search this agent's pinned skill loadout and return the most relevant skills for a task."
     : "Search the user's Iris skill library and return the most relevant skills for a task.";
-  return [
+  const head = [
     intro,
-    "Call this whenever a request might be handled by one of the skills below, then use",
+    "Call this whenever a request might be handled by an available skill, then use",
     "`load_skill` to open the winning skill's full instructions.",
+  ];
+  // The "without Tier-1" A/B arm: tool stays available, but the always-loaded
+  // awareness index is withheld so we can measure what it contributes.
+  if (!awareness) return head.join("\n");
+  return [
+    ...head,
     "",
     "The always-current skill index (name — when to use):",
     "",
-    index,
+    lib.buildTier1Index({ scopeIds: scope?.ids }),
   ].join("\n");
 }
 
@@ -72,6 +101,9 @@ export function createIrisMcpServer(
 ): IrisMcpServer {
   const allowExec = opts.allowExec ?? true;
   const defaultK = opts.defaultK ?? 5;
+  const awareness = opts.awareness ?? true;
+  const emit = (e: Omit<DiscoveryEvent, "ts">): void =>
+    opts.onEvent?.({ ts: new Date().toISOString(), ...e });
   const scope = opts.scope;
   // Skills visible on the discovery surfaces (Tier-1, resources, prompts).
   const visibleSkills = () =>
@@ -97,7 +129,7 @@ export function createIrisMcpServer(
     "find_skill",
     {
       title: "Find Iris skills",
-      description: findDescription(lib, scope),
+      description: findDescription(lib, scope, awareness),
       inputSchema: {
         query: z.string().describe("The user's task or intent to find a skill for."),
         k: z.number().int().positive().max(25).optional().describe("Max results (default 5)."),
@@ -109,6 +141,13 @@ export function createIrisMcpServer(
         k ?? defaultK,
         scope ? { scopeIds: scope.ids, allowBroaden: scope.allowBroaden } : undefined,
       );
+      emit({
+        tool: "find_skill",
+        query,
+        results: response.results.map((r) => ({ id: r.id, score: r.score, confidence: r.confidence })),
+        confidence: response.confidence,
+        noStrongMatch: response.noStrongMatch,
+      });
       return text(response);
     },
   );
@@ -123,6 +162,7 @@ export function createIrisMcpServer(
     },
     async ({ id }) => {
       const body = await lib.loadBody(id);
+      emit({ tool: "load_skill", id, found: body !== undefined });
       if (body === undefined) return errorText(`No skill found with id "${id}".`);
       return text(body);
     },
@@ -229,7 +269,7 @@ export function createIrisMcpServer(
   syncPrompts();
 
   const refresh = (): void => {
-    findTool.update({ description: findDescription(lib, scope) });
+    findTool.update({ description: findDescription(lib, scope, awareness) });
     syncPrompts();
   };
 

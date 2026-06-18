@@ -157,3 +157,41 @@ describe("Iris MCP server — scoped loadout (Mode B)", () => {
     expect(names).not.toContain("iris:sql-migrate");
   });
 });
+
+describe("discovery telemetry + Tier-1 toggle", () => {
+  it("withholds the awareness index when awareness=false but keeps the tool", async () => {
+    const lib = new IrisLibrary({ root: LIB });
+    await lib.load();
+    const { server } = createIrisMcpServer(lib, { awareness: false });
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "t", version: "0.0.0" });
+    await Promise.all([server.connect(st), client.connect(ct)]);
+
+    const { tools } = await client.listTools();
+    const find = tools.find((t) => t.name === "find_skill");
+    expect(find).toBeDefined();
+    expect(find?.description).not.toContain("— Use when"); // index entries withheld
+    await client.close();
+    await server.close();
+  });
+
+  it("emits find_skill and load_skill events to onEvent", async () => {
+    const lib = new IrisLibrary({ root: LIB });
+    await lib.load();
+    const events: { tool: string; id?: string; query?: string }[] = [];
+    const { server } = createIrisMcpServer(lib, { onEvent: (e) => events.push(e) });
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "t", version: "0.0.0" });
+    await Promise.all([server.connect(st), client.connect(ct)]);
+
+    await client.callTool({ name: "find_skill", arguments: { query: "fill out a pdf form" } });
+    await client.callTool({ name: "load_skill", arguments: { id: "pdf-forms" } });
+
+    const find = events.find((e) => e.tool === "find_skill");
+    const load = events.find((e) => e.tool === "load_skill");
+    expect(find?.query).toBe("fill out a pdf form");
+    expect(load?.id).toBe("pdf-forms");
+    await client.close();
+    await server.close();
+  });
+});

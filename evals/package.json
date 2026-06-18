@@ -15,7 +15,8 @@
     "accuracy": "tsx src/accuracy.ts",
     "benchoff": "tsx src/bench.ts",
     "abstain": "tsx src/abstain.ts",
-    "sweep": "tsx src/sweep.ts"
+    "sweep": "tsx src/sweep.ts",
+    "discovery": "tsx src/discovery.ts"
   },
   "dependencies": {
     "@iris-sylvia/core": "workspace:*",
