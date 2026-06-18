@@ -1,8 +1,36 @@
 // SPDX-License-Identifier: Apache-2.0
+import { appendFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { IrisLibrary, readManifest, readManifestFile, resolveLoadout } from "@iris-sylvia/core";
 import { resolveDefaultProvider } from "@iris-sylvia/embeddings";
-import { createIrisMcpServer, type CreateServerOptions, type ServerScope } from "./server.js";
+import {
+  createIrisMcpServer,
+  type CreateServerOptions,
+  type DiscoveryEvent,
+  type ServerScope,
+} from "./server.js";
+
+/**
+ * Discovery telemetry from the environment, for the wild-discovery A/B:
+ *  - IRIS_LOG: append per-call JSONL events to this file.
+ *  - IRIS_SESSION: session id stamped on every event (default: random).
+ *  - IRIS_NO_AWARENESS=1: withhold the Tier-1 index from the tool description.
+ */
+function envTelemetry(): { awareness: boolean; onEvent?: (e: DiscoveryEvent) => void } {
+  const awareness = process.env.IRIS_NO_AWARENESS !== "1";
+  const logPath = process.env.IRIS_LOG;
+  if (!logPath) return { awareness };
+  const session = process.env.IRIS_SESSION ?? randomUUID();
+  const onEvent = (e: DiscoveryEvent): void => {
+    try {
+      appendFileSync(logPath, JSON.stringify({ session, awareness, ...e }) + "\n");
+    } catch {
+      /* never let telemetry break the server */
+    }
+  };
+  return { awareness, onEvent };
+}
 
 export interface StdioOptions extends CreateServerOptions {
   /** Library root directory. */
@@ -53,7 +81,7 @@ export async function startStdioServer(
     }
   }
 
-  const { server, refresh } = createIrisMcpServer(lib, { ...opts, scope });
+  const { server, refresh } = createIrisMcpServer(lib, { ...opts, scope, ...envTelemetry() });
 
   let unwatch: (() => void) | undefined;
   if (opts.watch ?? true) {
