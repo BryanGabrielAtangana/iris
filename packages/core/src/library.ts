@@ -8,6 +8,7 @@ import {
   createEmbeddingProvider,
   createVectorStore,
   cosineSimilarity,
+  embedQueries,
 } from "@iris-sylvia/embeddings";
 import { scanLibrary, type ScanResult } from "./scan.js";
 import { buildTier1Index, type Tier1Options } from "./tier1.js";
@@ -128,7 +129,7 @@ export class IrisLibrary {
     opts?: { scopeIds?: string[]; allowBroaden?: boolean },
   ): Promise<FindResult[]> {
     if (this.indexed.size === 0 || query.trim().length === 0) return [];
-    const [queryVec] = await this.provider.embed([query]);
+    const [queryVec] = await embedQueries(this.provider, [query]);
     const qv = queryVec ?? [];
 
     const scopeSet = opts?.scopeIds ? new Set(opts.scopeIds) : undefined;
@@ -206,7 +207,7 @@ export class IrisLibrary {
    */
   async signals(query: string, opts?: { scopeIds?: string[] }): Promise<Signal[]> {
     if (this.indexed.size === 0 || query.trim().length === 0) return [];
-    const [queryVec] = await this.provider.embed([query]);
+    const [queryVec] = await embedQueries(this.provider, [query]);
     const qv = queryVec ?? [];
     const scope = opts?.scopeIds ? new Set(opts.scopeIds) : undefined;
     const signals: Signal[] = [];

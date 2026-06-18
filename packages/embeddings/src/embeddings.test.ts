@@ -84,14 +84,19 @@ describe("resolveDefaultProvider", () => {
     expect(p.name).toBe("local-hashing");
   });
 
-  it("falls back to a working provider when the semantic model can't load", async () => {
-    // In CI / offline / firewalled environments the model download fails; the
-    // resolver must degrade to a usable provider rather than throw.
+  it("falls back to the lexical provider when the semantic model can't load", async () => {
+    // Force the failure path with a model id that can't resolve, so this stays a
+    // fast, deterministic unit test instead of a ~12s live model download (which
+    // flaked against the 30s timeout). Real model loading is covered by the
+    // accuracy CI job, which has the model cache.
     let fellBack = false;
-    const p = await resolveDefaultProvider({ onFallback: () => (fellBack = true) });
+    const p = await resolveDefaultProvider({
+      model: "iris-test/nonexistent-model",
+      onFallback: () => (fellBack = true),
+    });
     const [v] = await p.embed(["semantic search test"]);
     expect((v ?? []).length).toBe(p.dimensions);
-    // Either the model loaded (semantic) or we fell back to lexical — never broken.
-    expect(p.name === "local-hashing" ? fellBack : true).toBe(true);
+    expect(p.name).toBe("local-hashing");
+    expect(fellBack).toBe(true);
   }, 30_000);
 });
