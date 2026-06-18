@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, it, expect } from "vitest";
+import { Bm25Index, skillTriggerText, scanLibrary } from "@iris-sylvia/core";
 import { createEmbeddingProvider } from "@iris-sylvia/embeddings";
-import { runAccuracy } from "./accuracy.js";
+import { runAccuracy, DEFAULT_SKILLS_DIR } from "./accuracy.js";
+import { matchesExpected } from "./dataset.js";
 import { POSITIVES, AMBIGUOUS, SEMANTIC_ONLY, NEGATIVES_OOD, NEGATIVES_NEARMISS } from "./v3.js";
 
 describe("v0.3 dataset shape", () => {
@@ -23,6 +25,24 @@ describe("Task-0 gate: the eval isolates meaning", () => {
     const report = await runAccuracy(createEmbeddingProvider({ kind: "local" }));
     expect(report.semanticOnlyTop1).toBeLessThanOrEqual(0.4);
   }, 30_000);
+
+  it("BM25 (token-level lexical) also scores ≤ 40% on the semantic-only subset", async () => {
+    // The subset was hardened against the char-n-gram hashing engine; BM25 is a
+    // different (token-level, IDF) lexical path. Guard it independently so a case
+    // that shares a content word with its skill can't quietly leak in.
+    const { skills } = await scanLibrary(DEFAULT_SKILLS_DIR);
+    const bm25 = new Bm25Index(
+      skills.map((s) => ({ id: s.id, text: skillTriggerText(s), name: s.metadata.name })),
+    );
+    let hits = 0;
+    for (const c of SEMANTIC_ONLY) {
+      const top = skills
+        .map((s) => ({ id: s.id, score: bm25.score(c.query, s.id) }))
+        .sort((a, b) => b.score - a.score)[0];
+      if (top && matchesExpected(c.expected, top.id)) hits++;
+    }
+    expect(hits / SEMANTIC_ONLY.length).toBeLessThanOrEqual(0.4);
+  });
 
   it("produces an abstention curve with a usable operating point", async () => {
     const report = await runAccuracy(createEmbeddingProvider({ kind: "local" }));
