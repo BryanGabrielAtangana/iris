@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtemp, stat, readFile, cp, mkdir } from "node:fs/promises";
-import { buildProgram } from "../src/index.js";
+import { buildProgram } from "../src/program.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PDF = join(here, "..", "..", "core", "test", "fixtures", "lib", "pdf-forms");
