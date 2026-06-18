@@ -1,4 +1,4 @@
-# @iris/protocol
+# @iris-sylvia/protocol
 
 The Iris Skill Access Protocol — zod schemas for skill metadata and the `iris.lock` manifest, plus JSON Schema generation and parse helpers. Zero internal dependencies.
 

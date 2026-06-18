@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
-import type { Skill, FindResult } from "@iris/protocol";
+import type { Skill, FindResult } from "@iris-sylvia/protocol";
 import {
   type EmbeddingProvider,
   type VectorStore,
   createEmbeddingProvider,
   createVectorStore,
   cosineSimilarity,
-} from "@iris/embeddings";
+} from "@iris-sylvia/embeddings";
 import { scanLibrary, type ScanResult } from "./scan.js";
 import { buildTier1Index, type Tier1Options } from "./tier1.js";
 import { skillIndexText, lexicalScore, combineScores, type CombineWeights } from "./ranking.js";

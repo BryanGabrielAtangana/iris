@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
-import { IrisLibrary } from "@iris/core";
+import { IrisLibrary } from "@iris-sylvia/core";
 import { NaiveBaseline } from "./baseline.js";
 import { evaluate, formatMetrics, type Metrics } from "./runner.js";
 

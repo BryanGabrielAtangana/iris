@@ -4,7 +4,7 @@ import { basename, join, relative } from "node:path";
 import matter from "gray-matter";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
-import { parseSkillMetadata, type Skill } from "@iris/protocol";
+import { parseSkillMetadata, type Skill } from "@iris-sylvia/protocol";
 
 /** Slugify a name into a filesystem/url-safe id segment. */
 export function slugify(input: string): string {

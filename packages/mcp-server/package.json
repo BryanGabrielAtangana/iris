@@ -1,5 +1,5 @@
 {
-  "name": "@iris/mcp",
+  "name": "@iris-sylvia/mcp",
   "version": "0.1.0",
   "description": "Iris MCP server — exposes Tier-1 awareness, Tier-2 find, Tier-3 load, resources and prompts over the Model Context Protocol.",
   "license": "Apache-2.0",
@@ -27,8 +27,8 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@iris/core": "workspace:*",
-    "@iris/protocol": "workspace:*",
+    "@iris-sylvia/core": "workspace:*",
+    "@iris-sylvia/protocol": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.0"
   },

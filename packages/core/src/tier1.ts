@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import { type Skill, type Tier1Entry, TIER1_TOKEN_BUDGET, estimateTokens } from "@iris/protocol";
+import {
+  type Skill,
+  type Tier1Entry,
+  TIER1_TOKEN_BUDGET,
+  estimateTokens,
+} from "@iris-sylvia/protocol";
 
 /** Derive the Tier-1 one-liner for a skill. */
 export function tier1Line(skill: Skill): string {

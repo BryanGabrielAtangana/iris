@@ -1,6 +1,6 @@
 ---
-"@iris/adapters": minor
-"@iris/cli": patch
+"@iris-sylvia/adapters": minor
+"@iris-sylvia/cli": patch
 ---
 
 Add a Cursor adapter and inject a behavioral awareness directive into every always-loaded surface.

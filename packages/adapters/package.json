@@ -1,5 +1,5 @@
 {
-  "name": "@iris/adapters",
+  "name": "@iris-sylvia/adapters",
   "version": "0.1.0",
   "description": "Iris surface adapters — write skills and the Tier-1 index into agent surfaces (Claude Code, Codex, …).",
   "license": "Apache-2.0",
@@ -24,8 +24,8 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@iris/core": "workspace:*",
-    "@iris/protocol": "workspace:*"
+    "@iris-sylvia/core": "workspace:*",
+    "@iris-sylvia/protocol": "workspace:*"
   },
   "keywords": [
     "iris",

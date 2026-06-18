@@ -1,4 +1,4 @@
-# `@iris/docs` (deferred)
+# `@iris-sylvia/docs` (deferred)
 
 > **Status: deferred — a later milestone.** This directory is a placeholder for
 > the Iris documentation and specification site. There is no site to build or run

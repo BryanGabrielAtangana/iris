@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * @iris/registry-client — [STUB]
+ * @iris-sylvia/registry-client — [STUB]
  *
  * Resolution and fetch/publish for `@namespace/skill` references against a
  * skill registry. This package intentionally ships only interfaces: the

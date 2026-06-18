@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * @iris/protocol — the Iris Skill Access Protocol contract.
+ * @iris-sylvia/protocol — the Iris Skill Access Protocol contract.
  *
  * Zero internal dependencies. Everything downstream (core, mcp, cli, adapters)
  * imports its types and schemas from here.

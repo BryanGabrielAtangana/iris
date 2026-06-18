@@ -1,4 +1,4 @@
-# @iris/mcp
+# @iris-sylvia/mcp
 
 The Iris Model Context Protocol server. Exposes `find_skill` / `load_skill` / `run_skill_script`, `skill://` resources and `iris:` prompts so any MCP client (Claude Code, Codex, Cursor, Gemini CLI) can discover and invoke skills. Binary: `iris-mcp`.
 

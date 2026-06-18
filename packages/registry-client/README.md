@@ -1,4 +1,4 @@
-# @iris/registry-client
+# @iris-sylvia/registry-client
 
 [stub] `@namespace/skill` resolution and fetch/publish for an Iris skill registry. Interfaces only — the reference registry is deferred.
 

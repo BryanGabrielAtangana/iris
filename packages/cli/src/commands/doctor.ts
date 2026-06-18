@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { estimateTokens, TIER1_TOKEN_BUDGET } from "@iris/core";
+import { estimateTokens, TIER1_TOKEN_BUDGET } from "@iris-sylvia/core";
 import { loadLibrary, resolveLibraryRoot } from "../library.js";
 
 export interface DoctorOptions {

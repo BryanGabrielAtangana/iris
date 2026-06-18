@@ -9,7 +9,7 @@
 
 This document is the human-readable, versioned specification of how Iris
 describes skills and exposes them to agents. The TypeScript reference
-implementation lives in [`@iris/protocol`](../packages/protocol); a JSON Schema
+implementation lives in [`@iris-sylvia/protocol`](../packages/protocol); a JSON Schema
 generated from the same zod definitions is available via
 `generateJsonSchema()` so non-TypeScript consumers can validate skill metadata.
 
@@ -179,4 +179,4 @@ interfaces, not implementations.
 This protocol is versioned independently of the implementation. Backwards-
 compatible additions (new optional fields) bump the minor version; breaking
 changes bump the major version. `PROTOCOL_VERSION` is exported from
-`@iris/protocol`.
+`@iris-sylvia/protocol`.

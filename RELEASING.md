@@ -5,34 +5,35 @@
 Iris is a pnpm + Turborepo monorepo released with [Changesets](https://github.com/changesets/changesets).
 Published packages:
 
-| npm package             | bin        | notes                           |
-| ----------------------- | ---------- | ------------------------------- |
-| `@iris/protocol`        | —          |                                 |
-| `@iris/embeddings`      | —          |                                 |
-| `@iris/core`            | —          |                                 |
-| `@iris/adapters`        | —          |                                 |
-| `@iris/mcp`             | `iris-mcp` | the MCP server                  |
-| `@iris/cli`             | `iris`     | unscoped `iris` is taken on npm |
-| `@iris/registry-client` | —          | stub                            |
+| npm package                    | bin        | notes                           |
+| ------------------------------ | ---------- | ------------------------------- |
+| `@iris-sylvia/protocol`        | —          |                                 |
+| `@iris-sylvia/embeddings`      | —          |                                 |
+| `@iris-sylvia/core`            | —          |                                 |
+| `@iris-sylvia/adapters`        | —          |                                 |
+| `@iris-sylvia/mcp`             | `iris-mcp` | the MCP server                  |
+| `@iris-sylvia/cli`             | `iris`     | unscoped `iris` is taken on npm |
+| `@iris-sylvia/registry-client` | —          | stub                            |
 
 `evals/`, `apps/registry`, and `apps/docs` are private and never published.
 
-## 0. Naming / scope (do this once)
+## 0. Naming / scope
 
-The `@iris/*` names are currently free, but **you must own the `@iris`
-organization on npm** to publish under that scope (npmjs.com → _Add
-Organization_). If `@iris` is unavailable, pick a scope you own and
-find-and-replace it across the repo:
+Packages publish under the **`@iris-sylvia`** npm organization. Make sure you are
+a member with publish rights (npmjs.com → the `iris-sylvia` org). The `@iris`
+scope was not used because the org name is `iris-sylvia`.
+
+If you ever need to move to a different scope, find-and-replace it across the
+repo (then re-run `pnpm install` to update the lockfile):
 
 ```bash
-# example: publish under @your-scope instead of @iris
-grep -rl '@iris/' packages | xargs sed -i 's#@iris/#@your-scope/#g'
-# also update workspace dependency names and imports accordingly
+grep -rl '@iris-sylvia/' . --include='*.ts' --include='*.json' --include='*.md' \
+  | xargs sed -i 's#@iris-sylvia/#@your-scope/#g'
 ```
 
-The unscoped `iris` package name is already taken, which is why the CLI ships as
-`@iris/cli` (its binary is still `iris`). Users run it via `npx @iris/cli` or,
-once installed, the `iris` command.
+The unscoped `iris` package name is already taken on npm, which is why the CLI
+ships as `@iris-sylvia/cli` (its binary is still `iris`). Users run it via
+`npx @iris-sylvia/cli`, or the `iris` command once installed.
 
 ## 1. Prerequisites
 

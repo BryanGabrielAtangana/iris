@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { resolve, join } from "node:path";
 import { stat, mkdir, rm, cp } from "node:fs/promises";
-import { parseSkillFile } from "@iris/core";
+import { parseSkillFile } from "@iris-sylvia/core";
 import { loadLibrary, resolveLibraryRoot } from "../library.js";
 
 export interface AddOptions {

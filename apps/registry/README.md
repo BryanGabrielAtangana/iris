@@ -1,4 +1,4 @@
-# `@iris/registry` (deferred)
+# `@iris-sylvia/registry` (deferred)
 
 > **Status: deferred. Not part of the MVP.** This directory is a placeholder for
 > the reference **registry server**. There is no runnable server here yet.
@@ -17,7 +17,7 @@ A reference, self-hostable registry server that handles:
   local library.
 - **Publish** — uploading a skill from a local library to the registry.
 
-It pairs with the [`@iris/registry-client`](../../packages/registry-client)
+It pairs with the [`@iris-sylvia/registry-client`](../../packages/registry-client)
 package, which is currently a stub. The client defines the protocol surface; this
 server will be the open reference implementation behind it.
 

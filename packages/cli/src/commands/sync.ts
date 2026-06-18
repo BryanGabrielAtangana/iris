@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { resolve } from "node:path";
-import { getAdapter, adapterNames, DEFAULT_ADAPTERS, type Adapter } from "@iris/adapters";
+import { getAdapter, adapterNames, DEFAULT_ADAPTERS, type Adapter } from "@iris-sylvia/adapters";
 import { loadLibrary } from "../library.js";
 
 export interface SyncOptions {

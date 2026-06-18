@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RegisteredTool, RegisteredPrompt } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { IrisLibrary } from "@iris/core";
+import type { IrisLibrary } from "@iris-sylvia/core";
 import { runSkillScript } from "./exec.js";
 
 export const IRIS_SERVER_NAME = "Iris";

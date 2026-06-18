@@ -1,4 +1,4 @@
-# @iris/embeddings
+# @iris-sylvia/embeddings
 
 Pluggable embedding provider + embedded vector store for Iris. Ships a fully local, offline, zero-dependency default (no API key, no model download) with a FastEmbed adapter behind the same interface.
 

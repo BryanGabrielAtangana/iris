@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { join } from "node:path";
-import type { Skill } from "@iris/protocol";
+import type { Skill } from "@iris-sylvia/protocol";
 import { type Adapter, type AdapterContext, renderAwareness } from "./adapter.js";
 import { copySkill, writeFileEnsured } from "./fs-utils.js";
 

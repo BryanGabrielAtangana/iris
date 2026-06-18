@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { FindResult } from "@iris/core";
+import type { FindResult } from "@iris-sylvia/core";
 import { DATASET, type EvalCase } from "./dataset.js";
 
 export interface Metrics {
