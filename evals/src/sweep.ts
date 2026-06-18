@@ -13,6 +13,8 @@ import {
   TransformersEmbeddingProvider,
   LocalHashingProvider,
   modelByKey,
+  cosineSimilarity,
+  embedQueries,
   type EmbeddingProvider,
 } from "@iris-sylvia/embeddings";
 import { evaluate } from "./runner.js";
@@ -89,6 +91,19 @@ async function main(): Promise<void> {
   }
   if (provider instanceof LocalHashingProvider) return; // unreachable; keeps types happy
 
+  // Acceptance gate #1: a prefixed query must differ from the document encoding
+  // for asymmetric models, or the prefix isn't wired and every number is invalid.
+  const probe = "fill out a pdf form with my details";
+  const [docVec] = await provider.embed([probe]);
+  const [qVec] = await embedQueries(provider, [probe]);
+  const prefixDelta = 1 - cosineSimilarity(docVec ?? [], qVec ?? []);
+  const asymmetric = (spec.queryPrefix ?? "") !== (spec.documentPrefix ?? "");
+  if (asymmetric && prefixDelta < 1e-4) {
+    process.stdout.write(
+      `\n[gate] WARNING ${spec.key}: prefixΔ ${prefixDelta.toExponential(2)} — query/doc prefixes look UNWIRED.\n`,
+    );
+  }
+
   const rssBefore = process.memoryUsage().rss;
   const lib = new IrisLibrary({ root: dir, provider }); // blob + blend@.3 defaults
   await lib.load();
@@ -135,7 +150,9 @@ async function main(): Promise<void> {
   const cacheMB = process.env.IRIS_MODEL_CACHE ? dirSizeBytes(process.env.IRIS_MODEL_CACHE) / 1024 / 1024 : 0;
 
   // --- Emit ---
-  process.stdout.write(`\nModel: ${provider.name}  dim=${provider.dimensions}  dtype=${spec.dtype}  (${spec.sizeClass})\n`);
+  process.stdout.write(
+    `\nModel: ${provider.name}  dim=${provider.dimensions}  pooling=${spec.pooling ?? "mean"}  dtype=${spec.dtype}  prefixΔ=${prefixDelta.toFixed(4)}  (${spec.sizeClass})\n`,
+  );
   for (const s of subsets) {
     const m = quality[s.name]!;
     process.stdout.write(`  ${s.name.padEnd(14)} acc@1 ${pct(m.top1).padStart(6)}  acc@3 ${pct(m.top3).padStart(6)}  MRR ${m.mrr.toFixed(3)}\n`);
@@ -151,7 +168,7 @@ async function main(): Promise<void> {
   );
   // Single machine-greppable line for cross-model aggregation from job logs.
   process.stdout.write(
-    `RESULT ${spec.key} full=${pct(quality.full!.top1)} sem=${pct(quality["semantic-only"]!.top1)} exact=${pct(quality["exact-vocab"]!.top1)} rejBlend=${pct(blendRej.recall)} rejSem=${pct(semRej.recall)} dl=${cacheMB.toFixed(0)}MB load=${loadMs.toFixed(0)}ms p95=${p95.toFixed(1)}ms rss=${rssPeakMB.toFixed(0)}MB\n`,
+    `RESULT ${spec.key} pool=${spec.pooling ?? "mean"} prefixD=${prefixDelta.toFixed(4)} full=${pct(quality.full!.top1)} sem=${pct(quality["semantic-only"]!.top1)} exact=${pct(quality["exact-vocab"]!.top1)} rejBlend=${pct(blendRej.recall)} rejSem=${pct(semRej.recall)} dl=${cacheMB.toFixed(0)}MB load=${loadMs.toFixed(0)}ms p95=${p95.toFixed(1)}ms rss=${rssPeakMB.toFixed(0)}MB\n`,
   );
 }
 
