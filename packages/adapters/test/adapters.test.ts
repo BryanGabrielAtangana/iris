@@ -8,8 +8,11 @@ import { IrisLibrary } from "@iris/core";
 import {
   ClaudeCodeAdapter,
   ChatAdapter,
+  CursorAdapter,
   getAdapter,
+  adapterNames,
   upsertManagedBlock,
+  renderAwareness,
   IRIS_BLOCK_BEGIN,
 } from "../src/index.js";
 
@@ -60,6 +63,8 @@ describe("ClaudeCodeAdapter (exec-capable)", () => {
 
     const claudeMd = await readFile(indexFile, "utf8");
     expect(claudeMd).toContain("- pdf-forms — Use when");
+    // The behavioral directive must ride along so skills fire automatically.
+    expect(claudeMd).toContain("call `iris_find`");
     expect(indexFile.endsWith("CLAUDE.md")).toBe(true);
   });
 
@@ -91,10 +96,59 @@ describe("ChatAdapter (graceful degradation)", () => {
   });
 });
 
+describe("CursorAdapter (always-applied rule)", () => {
+  it("writes an alwaysApply .mdc rule carrying the directive and Tier-1 index", async () => {
+    const target = await mkdtemp(join(tmpdir(), "iris-cursor-"));
+    const lib = new IrisLibrary({ root: LIB });
+    await lib.load();
+    const adapter = new CursorAdapter();
+    const ctx = { targetDir: target };
+
+    await adapter.writeSkills(lib.skills(), ctx);
+    const indexFile = await adapter.writeIndex(lib.buildTier1Index(), ctx);
+
+    expect(indexFile).toBe(join(target, ".cursor", "rules", "iris.mdc"));
+    const mdc = await readFile(indexFile, "utf8");
+    expect(mdc).toContain("alwaysApply: true");
+    expect(mdc).toContain("call `iris_find`");
+    expect(mdc).toContain("- pdf-forms — Use when");
+    // skills are also copied for non-MCP reference
+    expect(await exists(join(target, ".cursor", "skills", "pdf-forms", "SKILL.md"))).toBe(true);
+  });
+
+  it("regenerates the rule wholesale on re-sync (idempotent, single frontmatter)", async () => {
+    const target = await mkdtemp(join(tmpdir(), "iris-cursor2-"));
+    const lib = new IrisLibrary({ root: LIB });
+    await lib.load();
+    const adapter = new CursorAdapter();
+    const ctx = { targetDir: target };
+    await adapter.writeIndex(lib.buildTier1Index(), ctx);
+    const file = await adapter.writeIndex(lib.buildTier1Index(), ctx);
+    const mdc = await readFile(file, "utf8");
+    expect(mdc.split("alwaysApply: true").length - 1).toBe(1);
+  });
+});
+
+describe("renderAwareness", () => {
+  it("prefixes the index with the behavioral directive", () => {
+    const out = renderAwareness("- foo — bar");
+    expect(out).toContain("call `iris_find`");
+    expect(out).toContain("- foo — bar");
+    expect(out.indexOf("iris_find")).toBeLessThan(out.indexOf("- foo — bar"));
+  });
+});
+
 describe("getAdapter", () => {
   it("resolves built-in adapters by name", () => {
     expect(getAdapter("claude-code")?.name).toBe("claude-code");
     expect(getAdapter("codex")?.name).toBe("codex");
+    expect(getAdapter("cursor")?.name).toBe("cursor");
     expect(getAdapter("nope")).toBeUndefined();
+  });
+
+  it("lists all built-in adapter names", () => {
+    expect(adapterNames()).toEqual(
+      expect.arrayContaining(["claude-code", "codex", "cursor", "chat"]),
+    );
   });
 });

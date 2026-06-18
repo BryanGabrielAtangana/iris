@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { join } from "node:path";
 import type { Skill } from "@iris/protocol";
-import { type Adapter, type AdapterContext, upsertManagedBlock } from "./adapter.js";
+import {
+  type Adapter,
+  type AdapterContext,
+  upsertManagedBlock,
+  renderAwareness,
+} from "./adapter.js";
 import { copySkill, readOrEmpty, writeFileEnsured } from "./fs-utils.js";
 
 /**
@@ -34,7 +39,7 @@ export class CodexAdapter implements Adapter {
   async writeIndex(index: string, ctx: AdapterContext): Promise<string> {
     const { indexFile } = this.location(ctx);
     const existing = await readOrEmpty(indexFile);
-    await writeFileEnsured(indexFile, upsertManagedBlock(existing, index));
+    await writeFileEnsured(indexFile, upsertManagedBlock(existing, renderAwareness(index)));
     return indexFile;
   }
 }

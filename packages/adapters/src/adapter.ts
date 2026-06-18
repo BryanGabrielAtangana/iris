@@ -39,6 +39,31 @@ export const IRIS_BLOCK_BEGIN = "<!-- IRIS:BEGIN (managed by `iris sync` — do 
 export const IRIS_BLOCK_END = "<!-- IRIS:END -->";
 
 /**
+ * The behavioral directive that makes skills fire automatically. The Tier-1
+ * index alone is only an inventory; agents need an explicit instruction to
+ * reach for `iris_find` before improvising. This is injected into every
+ * always-loaded surface so discovery is plug-and-play rather than opt-in.
+ */
+export const IRIS_DIRECTIVE = [
+  "## Iris skills",
+  "",
+  "You have an Iris skill library available through the `iris` MCP server.",
+  "Before starting any non-trivial task, FIRST call `iris_find` with the user's",
+  "intent to check for a matching skill. If a clearly relevant skill is returned,",
+  "call `iris_load` with its id and follow that skill's instructions rather than",
+  "improvising or reconstructing an approach from prior commits or files. Only",
+  "fall back to your own approach when no skill matches.",
+].join("\n");
+
+/**
+ * Render the awareness payload written into an always-loaded surface: the
+ * behavioral directive followed by the current Tier-1 index.
+ */
+export function renderAwareness(index: string): string {
+  return `${IRIS_DIRECTIVE}\n\n${index}`;
+}
+
+/**
  * Insert or replace the Iris-managed block inside an existing document,
  * preserving everything the user has written around it.
  */
