@@ -39,7 +39,16 @@ export class TransformersEmbeddingProvider implements EmbeddingProvider {
     const spec = "@huggingface/transformers";
     const mod = (await import(/* @vite-ignore */ spec)) as {
       pipeline: (task: string, model: string) => Promise<unknown>;
+      env: { cacheDir?: string };
     };
+    // Pin transformers.js's model cache to a stable, controllable directory.
+    // Its default cache location is opaque (relative to cwd / package dir),
+    // which made CI cache the wrong path and re-download the model every run
+    // (hitting Hugging Face 429 rate limits). `IRIS_MODEL_CACHE` lets CI point
+    // the cache action at exactly where the weights land so the download
+    // happens at most once.
+    const cacheDir = process.env.IRIS_MODEL_CACHE;
+    if (cacheDir) mod.env.cacheDir = cacheDir;
     this.extractor = (await mod.pipeline("feature-extraction", this.model)) as NonNullable<
       typeof this.extractor
     >;
