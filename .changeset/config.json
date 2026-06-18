@@ -7,10 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": [
-    "@iris-sylvia/registry",
-    "@iris-sylvia/docs",
-    "@iris-sylvia/registry-app",
-    "@iris-sylvia/evals"
-  ]
+  "ignore": []
 }
