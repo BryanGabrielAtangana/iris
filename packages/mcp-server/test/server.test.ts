@@ -102,3 +102,51 @@ describe("Iris MCP server (real client over in-memory transport)", () => {
     expect(result.content.length).toBeGreaterThan(0);
   });
 });
+
+describe("Iris MCP server — scoped loadout (Mode B)", () => {
+  let client: Client;
+  let close: () => Promise<void>;
+  const SCOPE = ["pdf-forms", "git-commit"];
+
+  beforeAll(async () => {
+    const lib = new IrisLibrary({ root: LIB });
+    await lib.load();
+    const { server } = createIrisMcpServer(lib, { scope: { ids: SCOPE } });
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    client = new Client({ name: "test-client", version: "0.0.0" });
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    close = async () => {
+      await client.close();
+      await server.close();
+    };
+  });
+
+  afterAll(async () => {
+    await close();
+  });
+
+  it("embeds only the loadout in the find_skill description", async () => {
+    const { tools } = await client.listTools();
+    const find = tools.find((t) => t.name === "find_skill");
+    expect(find?.description).toContain("- pdf-forms — Use when");
+    expect(find?.description).not.toContain("- sql-migrate —");
+  });
+
+  it("bounds find_skill results to the loadout", async () => {
+    const result = (await client.callTool({
+      name: "find_skill",
+      arguments: { query: "add a column to the database", k: 5 },
+    })) as { content: { type: string; text?: string }[] };
+    const parsed = JSON.parse(firstText(result)) as { id: string }[];
+    expect(parsed.length).toBeGreaterThan(0);
+    for (const r of parsed) expect(SCOPE).toContain(r.id);
+  });
+
+  it("only lists scoped prompts", async () => {
+    const { prompts } = await client.listPrompts();
+    const names = prompts.map((p) => p.name);
+    expect(names).toContain("iris:pdf-forms");
+    expect(names).not.toContain("iris:sql-migrate");
+  });
+});

@@ -9,6 +9,7 @@ export * from "./scan.js";
 export * from "./tier1.js";
 export * from "./ranking.js";
 export * from "./lockfile-io.js";
+export * from "./loadout.js";
 export * from "./watch.js";
 export * from "./library.js";
 
@@ -21,6 +22,8 @@ export type {
   Tier1Entry,
   Lockfile,
   LockEntry,
+  LoadoutManifest,
+  ManifestSkill,
 } from "@iris-sylvia/protocol";
 export {
   PROTOCOL_VERSION,

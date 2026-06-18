@@ -180,3 +180,32 @@ This protocol is versioned independently of the implementation. Backwards-
 compatible additions (new optional fields) bump the minor version; breaking
 changes bump the major version. `PROTOCOL_VERSION` is exported from
 `@iris-sylvia/protocol`.
+
+## 8. Loadouts (`iris.json`) — scoped consumption
+
+A **loadout** is a developer-authored manifest that scopes an agent to a
+declared, version-pinned subset of the library — the "package.json of skills"
+(Mode B). It exists so framework agents (CrewAI, LangGraph, …) are reproducible
+and focused, versus the whole-library ambient discovery of Mode A.
+
+```json
+{
+  "manifestVersion": 1,
+  "name": "mail-agent",
+  "skills": ["git-commit-message", { "id": "pdf-forms", "version": "^1.0.0" }],
+  "policy": { "allowBroaden": false }
+}
+```
+
+- Each entry is a skill id, optionally with a semver range. Resolving the
+  manifest against a library produces an `iris.lock` pinning the selected skills
+  (version + integrity).
+- **Scoped discovery:** `find_skill` and the Tier-1 index are bounded to the
+  loadout. When `policy.allowBroaden` is true, retrieval may fall back to the
+  full library if nothing in scope matches; otherwise discovery stays bounded.
+- The Iris MCP server applies a loadout when launched with `IRIS_MANIFEST=<path>`
+  or when an `iris.json` is present in the library root; the CLI exposes
+  `iris lock` and `iris search --scope`.
+
+The same `find_skill` / `load_skill` core serves both modes — only the **scope**
+(whole library vs pinned subset) differs.

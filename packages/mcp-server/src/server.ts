@@ -8,18 +8,29 @@ import { runSkillScript } from "./exec.js";
 export const IRIS_SERVER_NAME = "Iris";
 export const IRIS_SERVER_VERSION = "0.1.0";
 
+/** A loadout scope that bounds discovery to a declared subset (Mode B). */
+export interface ServerScope {
+  ids: string[];
+  allowBroaden?: boolean;
+}
+
 export interface CreateServerOptions {
   /** Allow `iris_execute_script` to run bundled scripts. Default: true. */
   allowExec?: boolean;
   /** Default number of candidates returned by iris_find. */
   defaultK?: number;
+  /** Bound discovery to a loadout (Mode B). Omit for the full library (Mode A). */
+  scope?: ServerScope;
 }
 
 /** Compose the find-tool description so the Tier-1 awareness index is embedded. */
-function findDescription(lib: IrisLibrary): string {
-  const index = lib.buildTier1Index();
+function findDescription(lib: IrisLibrary, scope?: ServerScope): string {
+  const index = lib.buildTier1Index({ scopeIds: scope?.ids });
+  const intro = scope
+    ? "Search this agent's pinned skill loadout and return the most relevant skills for a task."
+    : "Search the user's Iris skill library and return the most relevant skills for a task.";
   return [
-    "Search the user's Iris skill library and return the most relevant skills for a task.",
+    intro,
     "Call this whenever a request might be handled by one of the skills below, then use",
     "`load_skill` to open the winning skill's full instructions.",
     "",
@@ -61,6 +72,10 @@ export function createIrisMcpServer(
 ): IrisMcpServer {
   const allowExec = opts.allowExec ?? true;
   const defaultK = opts.defaultK ?? 5;
+  const scope = opts.scope;
+  // Skills visible on the discovery surfaces (Tier-1, resources, prompts).
+  const visibleSkills = () =>
+    scope ? lib.skills().filter((s) => scope.ids.includes(s.id)) : lib.skills();
 
   const server = new McpServer(
     { name: IRIS_SERVER_NAME, version: IRIS_SERVER_VERSION },
@@ -82,14 +97,18 @@ export function createIrisMcpServer(
     "find_skill",
     {
       title: "Find Iris skills",
-      description: findDescription(lib),
+      description: findDescription(lib, scope),
       inputSchema: {
         query: z.string().describe("The user's task or intent to find a skill for."),
         k: z.number().int().positive().max(25).optional().describe("Max results (default 5)."),
       },
     },
     async ({ query, k }) => {
-      const results = await lib.find(query, k ?? defaultK);
+      const results = await lib.find(
+        query,
+        k ?? defaultK,
+        scope ? { scopeIds: scope.ids, allowBroaden: scope.allowBroaden } : undefined,
+      );
       return text(results);
     },
   );
@@ -141,7 +160,7 @@ export function createIrisMcpServer(
     "skill",
     new ResourceTemplate("skill://{id}", {
       list: () => ({
-        resources: lib.skills().map((s) => ({
+        resources: visibleSkills().map((s) => ({
           uri: `skill://${s.id}`,
           name: s.metadata.name,
           description: s.metadata.when_to_use ?? s.metadata.description,
@@ -177,14 +196,14 @@ export function createIrisMcpServer(
   // --- Prompts: /iris:<skill-name> for explicit invocation ---
   const prompts = new Map<string, RegisteredPrompt>();
   const syncPrompts = (): void => {
-    const liveIds = new Set(lib.skills().map((s) => s.id));
+    const liveIds = new Set(visibleSkills().map((s) => s.id));
     for (const [id, prompt] of prompts) {
       if (!liveIds.has(id)) {
         prompt.remove();
         prompts.delete(id);
       }
     }
-    for (const skill of lib.skills()) {
+    for (const skill of visibleSkills()) {
       if (prompts.has(skill.id)) continue;
       const registered = server.registerPrompt(
         `iris:${skill.metadata.name}`,
@@ -210,7 +229,7 @@ export function createIrisMcpServer(
   syncPrompts();
 
   const refresh = (): void => {
-    findTool.update({ description: findDescription(lib) });
+    findTool.update({ description: findDescription(lib, scope) });
     syncPrompts();
   };
 

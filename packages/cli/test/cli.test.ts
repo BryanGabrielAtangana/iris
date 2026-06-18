@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
-import { mkdtemp, stat, readFile, cp, mkdir } from "node:fs/promises";
+import { mkdtemp, stat, readFile, writeFile, cp, mkdir } from "node:fs/promises";
 import { buildProgram } from "../src/program.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -109,5 +109,51 @@ describe("iris CLI end-to-end", () => {
     await cp(FIXTURE_PDF, join(libRoot, "pdf-forms"), { recursive: true });
     await run("remove", "pdf-forms");
     expect(await exists(join(libRoot, "pdf-forms"))).toBe(false);
+  });
+});
+
+describe("iris loadout (Mode B)", () => {
+  const FIXTURE_SQL = join(here, "..", "..", "core", "test", "fixtures", "lib", "sql-migrate");
+
+  it("lock pins the iris.json loadout into iris.lock", async () => {
+    await cp(FIXTURE_PDF, join(libRoot, "pdf-forms"), { recursive: true });
+    await cp(FIXTURE_GIT, join(libRoot, "git-commit"), { recursive: true });
+    await cp(FIXTURE_SQL, join(libRoot, "sql-migrate"), { recursive: true });
+    await writeFile(
+      join(libRoot, "iris.json"),
+      JSON.stringify({ name: "demo", skills: ["pdf-forms", "git-commit"] }),
+      "utf8",
+    );
+
+    out = "";
+    await run("lock");
+    expect(out).toContain("2 skill(s) pinned");
+
+    const lock = JSON.parse(await readFile(join(libRoot, "iris.lock"), "utf8")) as {
+      skills: { id: string }[];
+    };
+    expect(lock.skills.map((s) => s.id).sort()).toEqual(["git-commit", "pdf-forms"]);
+  });
+
+  it("search --scope bounds results to the loadout", async () => {
+    await cp(FIXTURE_PDF, join(libRoot, "pdf-forms"), { recursive: true });
+    await cp(FIXTURE_GIT, join(libRoot, "git-commit"), { recursive: true });
+    await cp(FIXTURE_SQL, join(libRoot, "sql-migrate"), { recursive: true });
+    await writeFile(
+      join(libRoot, "iris.json"),
+      JSON.stringify({ skills: ["pdf-forms", "git-commit"] }),
+      "utf8",
+    );
+
+    // Unscoped: sql-migrate wins for a DB query.
+    out = "";
+    await run("search", "add", "a", "database", "column");
+    expect(out).toContain("sql-migrate");
+
+    // Scoped: sql-migrate is excluded.
+    out = "";
+    await run("search", "add", "a", "database", "column", "--scope");
+    expect(out).toContain("loadout: 2 skills");
+    expect(out).not.toContain("sql-migrate");
   });
 });
