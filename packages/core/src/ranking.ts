@@ -11,21 +11,50 @@ export function tokenize(text: string): string[] {
 }
 
 /**
- * The text that represents a skill for Tier-2 embedding. Discovery-relevant
- * fields (name, when_to_use, examples) are weighted by repetition so that the
- * embedding leans on intent signals rather than prose.
+ * The single weighted-concat "blob" representation. Retained for the bench-off
+ * baseline; {@link skillFields} is the production representation.
  */
 export function skillIndexText(skill: Skill): string {
   const m = skill.metadata;
-  const parts: string[] = [
-    m.name,
-    m.name, // weight the name
-    m.description,
-  ];
+  const parts: string[] = [m.name, m.name, m.description];
   if (m.when_to_use) parts.push(m.when_to_use, m.when_to_use);
   for (const ex of m.examples) parts.push(ex);
   if (m.tags.length) parts.push(m.tags.join(" "));
   return parts.join("\n");
+}
+
+/** A field of a skill that is embedded as its own retrieval target. */
+export interface SkillField {
+  text: string;
+  weight: number;
+}
+
+/**
+ * Per-field representation: each discovery-relevant field is embedded
+ * separately rather than averaged into one blob. Crucially, **each `example` is
+ * its own vector** — examples are proxy queries and the strongest available
+ * signal. A skill is then scored by the *best-matching* field (max-over-fields),
+ * so a query that strongly matches one example/field is not diluted by a long
+ * description.
+ */
+export function skillFields(skill: Skill): SkillField[] {
+  const m = skill.metadata;
+  const fields: SkillField[] = [];
+  const seen = new Set<string>();
+  const push = (text: string | undefined, weight: number): void => {
+    const t = text?.trim();
+    if (!t) return;
+    const key = t.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    fields.push({ text: t, weight });
+  };
+  push(m.name, 1.0);
+  push(m.when_to_use, 1.0);
+  for (const ex of m.examples) push(ex, 1.0); // proxy queries — strongest signal
+  push(m.description, 0.95);
+  if (m.tags.length) push(m.tags.join(", "), 0.85);
+  return fields;
 }
 
 /** The concise "trigger text" used for the lexical half of the score. */

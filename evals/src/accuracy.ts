@@ -35,6 +35,8 @@ export interface AccuracyReport {
   provider: string;
   /** Metrics over all positives (incl. ambiguous, any-of accepted). */
   positives: Metrics;
+  /** Strict acc@1 over single-gold positives only (no any-of inflation). */
+  strictTop1: number;
   /** acc@1 over the semantic-only subset (the gate metric). */
   semanticOnlyTop1: number;
   /** Mean top score on positives whose top-1 is correct. */
@@ -61,6 +63,7 @@ export async function runAccuracy(
   await lib.load();
 
   const positives = await evaluate(lib, ALL_POSITIVES);
+  const strict = await evaluate(lib, POSITIVES); // single-gold only
   const semanticOnly = await evaluate(lib, SEMANTIC_ONLY);
 
   // Collect top-1 (id, score, correct) for positives, and top score for negatives.
@@ -110,6 +113,7 @@ export async function runAccuracy(
   return {
     provider: p.name,
     positives,
+    strictTop1: strict.top1,
     semanticOnlyTop1: semanticOnly.top1,
     positiveMeanScore,
     negativeMeanScore,
@@ -128,6 +132,7 @@ export function formatReport(r: AccuracyReport): string {
   return [
     `Provider: ${r.provider}`,
     `Positives (${ALL_POSITIVES.length}):  acc@1 ${pct(r.positives.top1)}   acc@3 ${pct(r.positives.top3)}   MRR ${r.positives.mrr.toFixed(3)}`,
+    `  strict acc@1 (${POSITIVES.length} single-gold): ${pct(r.strictTop1)}   (${AMBIGUOUS.length}/${ALL_POSITIVES.length} positives are ambiguous/any-of)`,
     `Semantic-only (${SEMANTIC_ONLY.length}):  acc@1 ${pct(r.semanticOnlyTop1)}   ← gate: lexical must be ≤ 40%`,
     `Negatives (${ALL_NEGATIVES.length}):  rejection@${r.threshold} ${pct(r.negativeRejectionRate)}   mean top ${r.negativeMeanScore.toFixed(3)}   (pos mean ${r.positiveMeanScore.toFixed(3)})`,
     `Best abstention F1: ${r.bestF1.f1.toFixed(3)} at t=${r.bestF1.threshold} (P ${pct(r.bestF1.precision)} / R ${pct(r.bestF1.recall)})`,
@@ -156,6 +161,17 @@ async function main(): Promise<void> {
         `  overall acc@1 ${d(semantic.positives.top1, lexical.positives.top1)},` +
         `  negative rejection ${d(semantic.negativeRejectionRate, lexical.negativeRejectionRate)}.\n`,
     );
+
+    // Semantic floor: guard against an embedding/representation regression that
+    // tanks semantic while the lexical-only gate stays green. Only enforced when
+    // the real model actually loaded (e.g. in CI, where HF is reachable).
+    const SEMANTIC_FLOOR = 0.7;
+    if (semantic.provider.startsWith("transformers") && semantic.semanticOnlyTop1 < SEMANTIC_FLOOR) {
+      process.stderr.write(
+        `\n[accuracy] FAIL: semantic-only acc@1 ${pct(semantic.semanticOnlyTop1)} < floor ${pct(SEMANTIC_FLOOR)}.\n`,
+      );
+      process.exitCode = 1;
+    }
   } else {
     process.stderr.write(
       `\n[accuracy] semantic engine unavailable here — both rows are the lexical fallback.\n`,

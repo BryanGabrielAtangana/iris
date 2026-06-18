@@ -8,10 +8,11 @@ import {
   createEmbeddingProvider,
   createVectorStore,
   cosineSimilarity,
+  normalize,
 } from "@iris-sylvia/embeddings";
 import { scanLibrary, type ScanResult } from "./scan.js";
 import { buildTier1Index, type Tier1Options } from "./tier1.js";
-import { skillIndexText, lexicalScore, combineScores, type CombineWeights } from "./ranking.js";
+import { skillFields, lexicalScore, combineScores, type CombineWeights } from "./ranking.js";
 import { readLockfile, writeLockfile, buildLockfile } from "./lockfile-io.js";
 import { watchLibrary, type Unsubscribe } from "./watch.js";
 
@@ -26,9 +27,15 @@ export interface IrisLibraryOptions {
   weights?: CombineWeights;
 }
 
+interface IndexedField {
+  vector: number[];
+  weight: number;
+}
+
 interface IndexedSkill {
   skill: Skill;
-  vector: number[];
+  /** One vector per field (name, when_to_use, each example, description, tags). */
+  fields: IndexedField[];
 }
 
 /**
@@ -64,12 +71,28 @@ export class IrisLibrary {
     this.indexed.clear();
     await this.store.clear();
     if (skills.length === 0) return;
-    const vectors = await this.provider.embed(skills.map(skillIndexText));
-    const records = skills.map((skill, i) => {
-      const vector = vectors[i] ?? [];
-      this.indexed.set(skill.id, { skill, vector });
-      return { id: skill.id, vector };
-    });
+
+    // Embed every field of every skill in a single batched call, then slice the
+    // flat result back per skill. Each skill ends up with multiple vectors.
+    const layout: { skill: Skill; start: number; weights: number[] }[] = [];
+    const texts: string[] = [];
+    for (const skill of skills) {
+      const fields = skillFields(skill);
+      layout.push({ skill, start: texts.length, weights: fields.map((f) => f.weight) });
+      for (const f of fields) texts.push(f.text);
+    }
+    const vectors = await this.provider.embed(texts);
+
+    const records = [];
+    for (const { skill, start, weights } of layout) {
+      const fields: IndexedField[] = weights.map((weight, i) => ({
+        vector: vectors[start + i] ?? [],
+        weight,
+      }));
+      this.indexed.set(skill.id, { skill, fields });
+      // Persist one representative (mean) vector per skill for the store.
+      records.push({ id: skill.id, vector: meanVector(fields.map((f) => f.vector)) });
+    }
     await this.store.upsert(records);
   }
 
@@ -126,9 +149,15 @@ export class IrisLibrary {
 
   private scoreAgainst(query: string, qv: number[], scope?: Set<string>): FindResult[] {
     const scored: FindResult[] = [];
-    for (const { skill, vector } of this.indexed.values()) {
+    for (const { skill, fields } of this.indexed.values()) {
       if (scope && !scope.has(skill.id)) continue;
-      const embeddingScore = cosineSimilarity(qv, vector);
+      // Max-over-fields: the best-matching field decides the embedding score, so
+      // a strong example/when_to_use match isn't averaged down by prose.
+      let embeddingScore = 0;
+      for (const f of fields) {
+        const s = f.weight * cosineSimilarity(qv, f.vector);
+        if (s > embeddingScore) embeddingScore = s;
+      }
       const lexical = lexicalScore(query, skill);
       const score = combineScores(embeddingScore, lexical, this.weights);
       scored.push({
@@ -188,4 +217,16 @@ export class IrisLibrary {
       onChange();
     });
   }
+}
+
+/** L2-normalized mean of a set of equal-length vectors (representative vector). */
+function meanVector(vectors: number[][]): number[] {
+  const dim = vectors[0]?.length ?? 0;
+  if (dim === 0) return [];
+  const mean = new Array<number>(dim).fill(0);
+  for (const v of vectors) {
+    for (let i = 0; i < dim; i++) mean[i] = (mean[i] as number) + (v[i] ?? 0);
+  }
+  for (let i = 0; i < dim; i++) mean[i] = (mean[i] as number) / vectors.length;
+  return normalize(mean);
 }
