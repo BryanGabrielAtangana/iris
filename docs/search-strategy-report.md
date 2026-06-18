@@ -210,7 +210,7 @@ operating point on the production ranker by data ✅; bias to high precision ✅
 keep acc@1 ≥95% ✅. The original "≥90% @ ≥95%" is **recorded as not achievable**
 without a reranker — a candidate for a future task, not a regression.
 
-## 11. Model sweep (v0.4) — **keep MiniLM**
+## 11. Model sweep (v0.4 + v0.5 re-verification) — **keep MiniLM (earned)**
 
 Swapped only the dense engine (blob + `blend@.3` held fixed) and measured five
 candidates on a manual CI matrix (`model-sweep.yml`), one cost-isolated job each.
@@ -246,6 +246,29 @@ hypothesis is false — abstention stays on the blended score.
 The prefix/MRL plumbing and the opt-in sweep job stay in the tree, so re-running
 the comparison when the library grows (where a stronger model may finally earn
 its cost) is one `workflow_dispatch` away.
+
+### 11a. v0.5 re-verification — the asymmetric models were **not** misconfigured
+
+The v0.4 quality numbers looked like a possible config bug (bge 77.8% vs e5
+44.4% on semantic-only — a suspicious gap for comparable models). Two fixes were
+applied and the sweep re-run: **per-model pooling** (bge → CLS; the v0.4 sweep
+mean-pooled everything) and a printed **prefix delta** (`1 − cos(doc, query)`)
+proving the query/document prefixes are actually live.
+
+| model (corrected) | pooling | prefixΔ | full acc@1 | sem-only | reject(blend) |
+| ----------------- | ------- | ------- | ---------- | -------- | ------------- |
+| **MiniLM**        | mean    | 0 (sym) | **95.5%**  | **83.3%**| 65.4%         |
+| bge-small         | **cls** | 0.045   | 91.1%      | 66.7%    | 73.1%         |
+| e5-small          | mean    | 0.064   | 88.4%      | 44.4%    | 78.8%         |
+| nomic (→256)      | mean    | 0.109   | 92.0%      | 61.1%    | 78.8%         |
+
+**Earned conclusion — confirm MiniLM.** Prefixes are wired (every asymmetric
+model has prefixΔ > 0) and bge uses its canonical CLS pooling, yet all three
+still regress accuracy. Notably (1) bge with **CLS scored *lower*** (66.7%) than
+the v0.4 mean-pooled run (77.8%) — so the gap was real model quality, not a
+pooling bug; and (2) e5's 44.4% is unchanged with prefixes confirmed applied. The
+asymmetric models genuinely underperform MiniLM on short-query → skill-metadata
+retrieval. The "keep MiniLM" decision is now earned on quality, not just cost.
 
 ## 12. Remaining tasks
 
