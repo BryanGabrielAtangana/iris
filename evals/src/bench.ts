@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Task 3 bench-off: for the resolved embedding model, run all three retrieval
-// strategies (semantic / bm25 / hybrid-RRF) and report acc@1 · acc@3 · MRR per
-// subset (full positives, semantic-only, exact-vocabulary) plus negative
-// rejection and the best abstention F1. The production default is chosen from
-// this table by data — not assumption.
+// Fusion bench-off: for the resolved embedding model, sweep many ways of
+// combining the dense (cosine) and sparse (BM25) signals and report acc@1 /
+// acc@3 / MRR per subset (full, semantic-only, exact-vocabulary) plus negative
+// rejection and best abstention F1. The production default is chosen from this
+// table by data. One embedding pass per query feeds every fusion variant.
 import { performance } from "node:perf_hooks";
 import { resolve } from "node:path";
-import { IrisLibrary } from "@iris-sylvia/core";
-import type { RetrievalStrategy } from "@iris-sylvia/core";
-import { resolveDefaultProvider, type EmbeddingProvider } from "@iris-sylvia/embeddings";
-import { evaluate } from "./runner.js";
+import { IrisLibrary, fuse, type FusionConfig, type Signal } from "@iris-sylvia/core";
+import { resolveDefaultProvider } from "@iris-sylvia/embeddings";
 import { matchesExpected, type EvalCase } from "./dataset.js";
 import { DEFAULT_SKILLS_DIR } from "./accuracy.js";
 import {
@@ -22,9 +20,21 @@ import {
   NEGATIVES_NEARMISS,
 } from "./v3.js";
 
-const STRATEGIES: RetrievalStrategy[] = ["semantic", "bm25", "hybrid"];
 const ALL_POSITIVES: EvalCase[] = [...POSITIVES, ...AMBIGUOUS];
 const ALL_NEGATIVES: string[] = [...NEGATIVES_OOD, ...NEGATIVES_NEARMISS];
+
+/** The fusion variants under test. Names are the table row labels. */
+const CANDIDATES: { name: string; cfg: FusionConfig }[] = [
+  { name: "semantic", cfg: { strategy: "semantic" } },
+  { name: "bm25", cfg: { strategy: "bm25" } },
+  { name: "blend@.3", cfg: { strategy: "blend", lexicalWeight: 0.3 } },
+  { name: "blend@.4", cfg: { strategy: "blend", lexicalWeight: 0.4 } },
+  { name: "blend@.5", cfg: { strategy: "blend", lexicalWeight: 0.5 } },
+  { name: "znorm@.4", cfg: { strategy: "znorm", lexicalWeight: 0.4 } },
+  { name: "znorm@.5", cfg: { strategy: "znorm", lexicalWeight: 0.5 } },
+  { name: "minmax@.4", cfg: { strategy: "minmax", lexicalWeight: 0.4 } },
+  { name: "rrf", cfg: { strategy: "rrf" } },
+];
 
 interface SubsetRow {
   name: string;
@@ -33,60 +43,57 @@ interface SubsetRow {
   top3: number;
   mrr: number;
 }
-
-interface StrategyReport {
-  strategy: RetrievalStrategy;
-  provider: string;
+interface CandidateReport {
+  name: string;
   subsets: SubsetRow[];
-  /** Fraction of negatives correctly rejected at the best-F1 threshold. */
   negRejection: number;
   bestF1: number;
-  bestF1Threshold: number;
-  medianLatencyMs: number;
 }
 
-async function benchStrategy(
-  strategy: RetrievalStrategy,
-  provider: EmbeddingProvider,
-  skillsDir: string,
-): Promise<StrategyReport> {
-  const lib = new IrisLibrary({ root: skillsDir, provider, strategy });
-  await lib.load();
+function rankFor(signals: Signal[], cfg: FusionConfig): { id: string; score: number }[] {
+  return [...fuse(signals, cfg)]
+    .map(([id, score]) => ({ id, score }))
+    .sort((a, b) => b.score - a.score);
+}
 
-  const subsetDefs: { name: string; cases: EvalCase[] }[] = [
-    { name: "full", cases: ALL_POSITIVES },
-    { name: "semantic-only", cases: SEMANTIC_ONLY },
-    { name: "exact-vocab", cases: EXACT_VOCABULARY },
-  ];
-  const subsets: SubsetRow[] = [];
-  for (const { name, cases } of subsetDefs) {
-    const m = await evaluate(lib, cases);
-    subsets.push({ name, n: cases.length, top1: m.top1, top3: m.top3, mrr: m.mrr });
+function subsetMetrics(
+  cases: EvalCase[],
+  sig: Map<string, Signal[]>,
+  cfg: FusionConfig,
+  name: string,
+): SubsetRow {
+  let top1 = 0;
+  let top3 = 0;
+  let mrr = 0;
+  for (const c of cases) {
+    const ranked = rankFor(sig.get(c.query) ?? [], cfg);
+    const idx = ranked.findIndex((x) => matchesExpected(c.expected, x.id));
+    if (idx === 0) top1++;
+    if (idx >= 0 && idx < 3) top3++;
+    if (idx >= 0) mrr += 1 / (idx + 1);
   }
+  const n = cases.length || 1;
+  return { name, n: cases.length, top1: top1 / n, top3: top3 / n, mrr: mrr / n };
+}
 
-  // Abstention / rejection: collect top-1 score + correctness on positives and
-  // the top score on negatives, then sweep thresholds adaptively (RRF and cosine
-  // live on very different scales).
-  const posTop: { score: number; correct: boolean }[] = [];
-  const latencies: number[] = [];
-  for (const c of ALL_POSITIVES) {
-    const t0 = performance.now();
-    const r = await lib.find(c.query, 5);
-    latencies.push(performance.now() - t0);
-    const top = r[0];
-    posTop.push({ score: top?.score ?? 0, correct: !!top && matchesExpected(c.expected, top.id) });
-  }
-  const negTop: number[] = [];
-  for (const q of ALL_NEGATIVES) {
-    const r = await lib.find(q, 5);
-    negTop.push(r[0]?.score ?? 0);
-  }
+function abstention(
+  sig: Map<string, Signal[]>,
+  cfg: FusionConfig,
+): { negRejection: number; bestF1: number } {
+  const posTop = ALL_POSITIVES.map((c) => {
+    const r = rankFor(sig.get(c.query) ?? [], cfg)[0];
+    return { score: r?.score ?? 0, correct: !!r && matchesExpected(c.expected, r.id) };
+  });
+  const negTop = ALL_NEGATIVES.map((q) => rankFor(sig.get(q) ?? [], cfg)[0]?.score ?? 0);
 
-  const STEPS = 50;
-  const maxTop = Math.max(0, ...posTop.map((x) => x.score), ...negTop);
-  let best = { f1: 0, threshold: 0, rejection: 1 };
+  // Adaptive sweep: fusion scores live on very different scales (RRF ~0.03,
+  // z-norm can be negative), so sweep across the observed range.
+  const lo = Math.min(0, ...posTop.map((x) => x.score), ...negTop);
+  const hi = Math.max(0, ...posTop.map((x) => x.score), ...negTop);
+  const STEPS = 60;
+  let best = { f1: 0, rejection: 1 };
   for (let i = 0; i <= STEPS; i++) {
-    const t = (maxTop * i) / STEPS;
+    const t = lo + ((hi - lo) * i) / STEPS;
     let tp = 0;
     let fp = 0;
     for (const x of posTop) {
@@ -102,70 +109,33 @@ async function benchStrategy(
     const precision = fired ? tp / fired : 1;
     const recall = tp / ALL_POSITIVES.length;
     const f1 = precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
-    if (f1 > best.f1) {
-      best = { f1, threshold: t, rejection: (negTop.length - firedNeg) / (negTop.length || 1) };
-    }
+    if (f1 > best.f1) best = { f1, rejection: (negTop.length - firedNeg) / (negTop.length || 1) };
   }
-
-  latencies.sort((a, b) => a - b);
-  return {
-    strategy,
-    provider: provider.name,
-    subsets,
-    negRejection: best.rejection,
-    bestF1: best.f1,
-    bestF1Threshold: best.threshold,
-    medianLatencyMs: latencies[Math.floor(latencies.length / 2)] ?? 0,
-  };
+  return { negRejection: best.rejection, bestF1: best.f1 };
 }
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 const pad = (s: string, n: number) => s.padEnd(n);
 
-function printTable(reports: StrategyReport[]): void {
-  process.stdout.write(`\nModel: ${reports[0]?.provider ?? "?"}\n`);
+function printTable(reports: CandidateReport[], model: string): void {
+  process.stdout.write(`\nModel: ${model}\n`);
   process.stdout.write(
-    `${pad("strategy", 10)} ${pad("subset", 20)} ${pad("acc@1", 8)} ${pad("acc@3", 8)} ${pad("MRR", 7)}\n`,
+    `${pad("fusion", 11)} ${pad("full", 8)} ${pad("sem-only", 9)} ${pad("exact", 8)} ${pad("neg-rej", 8)} absF1\n`,
   );
-  process.stdout.write(`${"-".repeat(55)}\n`);
+  process.stdout.write(`${"-".repeat(52)}\n`);
   for (const r of reports) {
-    for (const s of r.subsets) {
-      process.stdout.write(
-        `${pad(r.strategy, 10)} ${pad(`${s.name} (${s.n})`, 20)} ${pad(pct(s.top1), 8)} ${pad(pct(s.top3), 8)} ${s.mrr.toFixed(3)}\n`,
-      );
-    }
-  }
-  process.stdout.write(`\n${pad("strategy", 10)} ${pad("neg-reject", 12)} ${pad("absF1", 8)} latency\n`);
-  process.stdout.write(`${"-".repeat(40)}\n`);
-  for (const r of reports) {
+    const full = r.subsets.find((s) => s.name === "full")!;
+    const sem = r.subsets.find((s) => s.name === "semantic-only")!;
+    const ex = r.subsets.find((s) => s.name === "exact-vocab")!;
     process.stdout.write(
-      `${pad(r.strategy, 10)} ${pad(pct(r.negRejection), 12)} ${pad(r.bestF1.toFixed(3), 8)} ${r.medianLatencyMs.toFixed(2)}ms\n`,
+      `${pad(r.name, 11)} ${pad(pct(full.top1), 8)} ${pad(pct(sem.top1), 9)} ${pad(pct(ex.top1), 8)} ${pad(pct(r.negRejection), 8)} ${r.bestF1.toFixed(3)}\n`,
     );
   }
 }
 
-/** Pick the default: hybrid only earns it by leading on full-set acc@1 (ties → semantic). */
-function recommend(reports: StrategyReport[]): { winner: RetrievalStrategy; note: string } {
-  const full = (s: RetrievalStrategy) =>
-    reports.find((r) => r.strategy === s)?.subsets.find((x) => x.name === "full");
-  const sem = full("semantic")!;
-  const bm25 = full("bm25")!;
-  const hyb = full("hybrid")!;
-  const beatsBoth = hyb.top1 > sem.top1 && hyb.top1 > bm25.top1;
-  if (beatsBoth) {
-    return { winner: "hybrid", note: "hybrid leads full-set acc@1 over both pure strategies" };
-  }
-  // Stop-and-report condition from the spec: fusion didn't earn its complexity.
-  const winner: RetrievalStrategy = sem.top1 >= bm25.top1 ? "semantic" : "bm25";
-  return {
-    winner,
-    note: `hybrid did NOT beat both pure strategies (sem ${pct(sem.top1)}, bm25 ${pct(bm25.top1)}, hybrid ${pct(hyb.top1)}) — keep ${winner}`,
-  };
-}
-
 async function main(): Promise<void> {
   const dir = process.argv[2] ? resolve(process.argv[2]) : DEFAULT_SKILLS_DIR;
-  process.stdout.write(`Iris strategy bench-off (v0.3 dataset)\nLibrary: ${dir}\n`);
+  process.stdout.write(`Iris fusion bench-off (v0.3 dataset)\nLibrary: ${dir}\n`);
 
   const provider = await resolveDefaultProvider({
     onFallback: (r) => process.stderr.write(`[bench] ${r}\n`),
@@ -174,27 +144,57 @@ async function main(): Promise<void> {
   });
   const isLexicalFallback = !provider.name.startsWith("transformers");
   if (isLexicalFallback) {
-    process.stderr.write(
-      `[bench] semantic model unavailable — 'semantic'/'hybrid' rows use the lexical fallback embedding.\n`,
-    );
+    process.stderr.write(`[bench] semantic model unavailable — rows use the lexical fallback.\n`);
   }
 
-  const reports: StrategyReport[] = [];
-  for (const strategy of STRATEGIES) reports.push(await benchStrategy(strategy, provider, dir));
-  printTable(reports);
+  const lib = new IrisLibrary({ root: dir, provider });
+  await lib.load();
 
-  const { winner, note } = recommend(reports);
-  process.stdout.write(`\nRecommended default: ${winner} — ${note}\n`);
+  // One embedding pass per unique query, shared across all fusion variants.
+  // EXACT_VOCABULARY is a measurement-only slice (not part of ALL_POSITIVES), so
+  // include it explicitly or its rows score 0.
+  const queries = [
+    ...new Set([
+      ...ALL_POSITIVES.map((c) => c.query),
+      ...EXACT_VOCABULARY.map((c) => c.query),
+      ...ALL_NEGATIVES,
+    ]),
+  ];
+  const sig = new Map<string, Signal[]>();
+  const t0 = performance.now();
+  for (const q of queries) sig.set(q, await lib.signals(q));
+  const embedMs = (performance.now() - t0) / queries.length;
 
-  // Only assert when the real model ran (the decision must be made on semantic
-  // numbers, not the lexical fallback).
-  if (!isLexicalFallback) {
-    const hyb = reports.find((r) => r.strategy === "hybrid")!;
-    const full = hyb.subsets.find((s) => s.name === "full")!;
-    if (full.top1 < 0.93) {
-      process.stderr.write(`\n[bench] FAIL: hybrid full-set acc@1 ${pct(full.top1)} < 93%.\n`);
-      process.exitCode = 1;
-    }
+  const subsetDefs: { name: string; cases: EvalCase[] }[] = [
+    { name: "full", cases: ALL_POSITIVES },
+    { name: "semantic-only", cases: SEMANTIC_ONLY },
+    { name: "exact-vocab", cases: EXACT_VOCABULARY },
+  ];
+  const reports: CandidateReport[] = CANDIDATES.map(({ name, cfg }) => ({
+    name,
+    subsets: subsetDefs.map((d) => subsetMetrics(d.cases, sig, cfg, d.name)),
+    ...abstention(sig, cfg),
+  }));
+
+  printTable(reports, provider.name);
+  process.stdout.write(`\nMean embed/query: ${embedMs.toFixed(2)} ms\n`);
+
+  // Winner = best full-set acc@1, tie-break by semantic-only then abstention F1.
+  const fullTop1 = (r: CandidateReport) => r.subsets.find((s) => s.name === "full")!.top1;
+  const semOnly = (r: CandidateReport) => r.subsets.find((s) => s.name === "semantic-only")!.top1;
+  const winner = [...reports].sort(
+    (a, b) => fullTop1(b) - fullTop1(a) || semOnly(b) - semOnly(a) || b.bestF1 - a.bestF1,
+  )[0]!;
+  process.stdout.write(
+    `\nWinner: ${winner.name} — full acc@1 ${pct(fullTop1(winner))}, sem-only ${pct(semOnly(winner))}, absF1 ${winner.bestF1.toFixed(3)}\n`,
+  );
+
+  // Guard only when the real model ran: the chosen ranker must clear the
+  // recorded full-set baseline. Decision is made on semantic numbers, not the
+  // lexical fallback.
+  if (!isLexicalFallback && fullTop1(winner) < 0.93) {
+    process.stderr.write(`\n[bench] FAIL: winner full-set acc@1 ${pct(fullTop1(winner))} < 93%.\n`);
+    process.exitCode = 1;
   }
 }
 

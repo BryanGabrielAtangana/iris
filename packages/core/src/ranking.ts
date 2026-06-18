@@ -175,17 +175,6 @@ export function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x));
 }
 
-/** Retrieval strategy: dense only, sparse only, or their rank fusion. */
-export type RetrievalStrategy = "semantic" | "bm25" | "hybrid";
-
-/**
- * Provisional default. The production default is chosen empirically by the
- * strategy×model×subset bench-off (Task 3); until that lands it stays on the
- * proven dense engine, whose scores are already on the [0,1] scale the
- * abstention/floor gates assume.
- */
-export const DEFAULT_STRATEGY: RetrievalStrategy = "semantic";
-
 /** Constant in the RRF denominator. 60 is the standard value from the literature. */
 export const RRF_K = 60;
 
