@@ -11,7 +11,13 @@ import {
 } from "@iris-sylvia/embeddings";
 import { scanLibrary, type ScanResult } from "./scan.js";
 import { buildTier1Index, type Tier1Options } from "./tier1.js";
-import { skillIndexText, lexicalScore, combineScores, type CombineWeights } from "./ranking.js";
+import {
+  skillIndexText,
+  skillTriggerText,
+  Bm25Index,
+  combineScores,
+  type CombineWeights,
+} from "./ranking.js";
 import { readLockfile, writeLockfile, buildLockfile } from "./lockfile-io.js";
 import { watchLibrary, type Unsubscribe } from "./watch.js";
 
@@ -43,6 +49,7 @@ export class IrisLibrary {
   private readonly weights?: CombineWeights;
   private store: VectorStore;
   private indexed = new Map<string, IndexedSkill>();
+  private bm25 = new Bm25Index([]);
   private errors: ScanResult["errors"] = [];
 
   constructor(opts: IrisLibraryOptions) {
@@ -63,7 +70,14 @@ export class IrisLibrary {
   private async indexSkills(skills: Skill[]): Promise<void> {
     this.indexed.clear();
     await this.store.clear();
-    if (skills.length === 0) return;
+    if (skills.length === 0) {
+      this.bm25 = new Bm25Index([]);
+      return;
+    }
+    // Corpus-aware lexical index (needs all skills to compute IDF / avg length).
+    this.bm25 = new Bm25Index(
+      skills.map((s) => ({ id: s.id, text: skillTriggerText(s), name: s.metadata.name })),
+    );
     const vectors = await this.provider.embed(skills.map(skillIndexText));
     const records = skills.map((skill, i) => {
       const vector = vectors[i] ?? [];
@@ -129,7 +143,7 @@ export class IrisLibrary {
     for (const { skill, vector } of this.indexed.values()) {
       if (scope && !scope.has(skill.id)) continue;
       const embeddingScore = cosineSimilarity(qv, vector);
-      const lexical = lexicalScore(query, skill);
+      const lexical = this.bm25.score(query, skill.id);
       const score = combineScores(embeddingScore, lexical, this.weights);
       scored.push({
         id: skill.id,
