@@ -30,12 +30,18 @@ export interface SkillField {
 }
 
 /**
- * Per-field representation: each discovery-relevant field is embedded
- * separately rather than averaged into one blob. Crucially, **each `example` is
- * its own vector** — examples are proxy queries and the strongest available
- * signal. A skill is then scored by the *best-matching* field (max-over-fields),
- * so a query that strongly matches one example/field is not diluted by a long
- * description.
+ * Retrieval representation: the rich **blob** (the proven baseline vector) as the
+ * primary target, plus a few **sharp single-field targets** — `when_to_use` and
+ * **each `example`** (examples are proxy queries, the strongest available
+ * signal). A skill is scored by its *best-matching* target (max-over-fields), so
+ * the blob anchors a floor while a strong single-example/intent match can win
+ * without being diluted by surrounding prose.
+ *
+ * Deliberately omits `name`/`tags`/`description` as *standalone* vectors: those
+ * fragments embed poorly in isolation (context-free), inflate negatives under
+ * the max, and already live inside the blob. An earlier draft that exploded
+ * every field into its own vector regressed semantic-only acc@1 (83.3% → 72.2%)
+ * and negative rejection — keeping the blob as the floor is what fixes that.
  */
 export function skillFields(skill: Skill): SkillField[] {
   const m = skill.metadata;
@@ -49,11 +55,9 @@ export function skillFields(skill: Skill): SkillField[] {
     seen.add(key);
     fields.push({ text: t, weight });
   };
-  push(m.name, 1.0);
-  push(m.when_to_use, 1.0);
+  push(skillIndexText(skill), 1.0); // rich blob — the baseline floor
+  push(m.when_to_use, 1.0); // sharp intent target
   for (const ex of m.examples) push(ex, 1.0); // proxy queries — strongest signal
-  push(m.description, 0.95);
-  if (m.tags.length) push(m.tags.join(", "), 0.85);
   return fields;
 }
 
