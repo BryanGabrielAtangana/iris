@@ -1,6 +1,6 @@
 ---
 "@iris/mcp": minor
-"iris": minor
+"@iris/cli": minor
 "@iris/adapters": minor
 "@iris/registry-client": minor
 ---

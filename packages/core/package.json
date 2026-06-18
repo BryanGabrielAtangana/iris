@@ -30,5 +30,24 @@
     "gray-matter": "^4.0.3",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5"
+  },
+  "keywords": [
+    "iris",
+    "skills",
+    "agents",
+    "discovery",
+    "retrieval",
+    "mcp"
+  ],
+  "author": "The Iris Authors",
+  "homepage": "https://github.com/BryanGabrielAtangana/iris#readme",
+  "bugs": "https://github.com/BryanGabrielAtangana/iris/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BryanGabrielAtangana/iris.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
