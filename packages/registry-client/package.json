@@ -25,5 +25,21 @@
   },
   "dependencies": {
     "@iris/protocol": "workspace:*"
+  },
+  "keywords": [
+    "iris",
+    "registry",
+    "skills"
+  ],
+  "author": "The Iris Authors",
+  "homepage": "https://github.com/BryanGabrielAtangana/iris#readme",
+  "bugs": "https://github.com/BryanGabrielAtangana/iris/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BryanGabrielAtangana/iris.git",
+    "directory": "packages/registry-client"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

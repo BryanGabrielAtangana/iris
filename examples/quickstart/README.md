@@ -47,7 +47,7 @@ For the rest of this guide we'll call the CLI through the repo script `pnpm iris
 
 ```bash
 # Optional: expose `iris` and `iris-mcp` on your PATH
-pnpm --filter iris exec npm link
+pnpm --filter @iris/cli exec npm link
 pnpm --filter @iris/mcp exec npm link
 ```
 

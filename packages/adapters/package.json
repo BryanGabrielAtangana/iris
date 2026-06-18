@@ -26,5 +26,24 @@
   "dependencies": {
     "@iris/core": "workspace:*",
     "@iris/protocol": "workspace:*"
+  },
+  "keywords": [
+    "iris",
+    "adapters",
+    "claude-code",
+    "codex",
+    "cursor",
+    "skills"
+  ],
+  "author": "The Iris Authors",
+  "homepage": "https://github.com/BryanGabrielAtangana/iris#readme",
+  "bugs": "https://github.com/BryanGabrielAtangana/iris/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BryanGabrielAtangana/iris.git",
+    "directory": "packages/adapters"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

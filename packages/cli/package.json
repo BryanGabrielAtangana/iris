@@ -1,5 +1,5 @@
 {
-  "name": "iris",
+  "name": "@iris/cli",
   "version": "0.1.0",
   "description": "Iris CLI — manage a portable skill library and sync it into your agents.",
   "license": "Apache-2.0",
@@ -22,5 +22,24 @@
     "@iris/core": "workspace:*",
     "@iris/protocol": "workspace:*",
     "commander": "^15.0.0"
+  },
+  "keywords": [
+    "iris",
+    "cli",
+    "skills",
+    "agents",
+    "mcp",
+    "sync"
+  ],
+  "author": "The Iris Authors",
+  "homepage": "https://github.com/BryanGabrielAtangana/iris#readme",
+  "bugs": "https://github.com/BryanGabrielAtangana/iris/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BryanGabrielAtangana/iris.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
