@@ -39,7 +39,7 @@ Code, Codex, Cursor, Gemini CLI, … without modifying those agents), plus a
    Codex, …)    └───────────────────────┬──────────────────────┘
                                          │
    you ────────▶  iris (CLI)             │   @iris/adapters
-                  init/add/search/sync   │   claude-code · codex · chat
+                  init/add/search/sync   │   claude-code · codex · cursor · chat
                   /doctor                 \  (write skills + Tier-1 index)
                                           │
                                 ┌─────────▼─────────┐
@@ -65,16 +65,16 @@ no cloud code anywhere in this repo.
 
 ## Packages
 
-| Package                                             | Status | Description                                                                         |
-| --------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
-| [`@iris/protocol`](packages/protocol)               | MVP    | Zod schemas + generated JSON Schema. Zero runtime deps.                             |
-| [`@iris/embeddings`](packages/embeddings)           | MVP    | Pluggable embedding provider (offline local default) + embedded vector store.       |
-| [`@iris/core`](packages/core)                       | MVP    | Scan, parse, Tier-1 index, Tier-2 retrieval/ranking, `iris.lock`, watcher.          |
-| [`@iris/mcp`](packages/mcp-server)                  | MVP    | MCP gateway: `iris_find` / `iris_load` / `iris_execute_script`, resources, prompts. |
-| [`iris`](packages/cli)                              | MVP    | CLI: `init`, `add`, `remove`, `search`, `sync`, `doctor`.                           |
-| [`@iris/adapters`](packages/adapters)               | MVP    | Per-surface write logic: `claude-code`, `codex`, `chat`.                            |
-| [`@iris/registry-client`](packages/registry-client) | stub   | `@namespace/skill` resolution, fetch/publish (deferred).                            |
-| [`evals/`](evals)                                   | MVP    | Discovery-accuracy benchmark vs a naive baseline.                                   |
+| Package                                             | Status | Description                                                                                                                                                      |
+| --------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@iris/protocol`](packages/protocol)               | MVP    | Zod schemas + generated JSON Schema. Zero runtime deps.                                                                                                          |
+| [`@iris/embeddings`](packages/embeddings)           | MVP    | Pluggable embedding provider (offline local default) + embedded vector store.                                                                                    |
+| [`@iris/core`](packages/core)                       | MVP    | Scan, parse, Tier-1 index, Tier-2 retrieval/ranking, `iris.lock`, watcher.                                                                                       |
+| [`@iris/mcp`](packages/mcp-server)                  | MVP    | MCP gateway: `iris_find` / `iris_load` / `iris_execute_script`, resources, prompts.                                                                              |
+| [`iris`](packages/cli)                              | MVP    | CLI: `init`, `add`, `remove`, `search`, `sync`, `doctor`.                                                                                                        |
+| [`@iris/adapters`](packages/adapters)               | MVP    | Per-surface write logic: `claude-code`, `codex`, `cursor`, `chat`. Injects an always-loaded awareness directive + the Tier-1 index so skills fire automatically. |
+| [`@iris/registry-client`](packages/registry-client) | stub   | `@namespace/skill` resolution, fetch/publish (deferred).                                                                                                         |
+| [`evals/`](evals)                                   | MVP    | Discovery-accuracy benchmark vs a naive baseline.                                                                                                                |
 
 ## Quickstart
 

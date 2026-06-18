@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { resolve } from "node:path";
-import { getAdapter, DEFAULT_ADAPTERS, type Adapter } from "@iris/adapters";
+import { getAdapter, adapterNames, DEFAULT_ADAPTERS, type Adapter } from "@iris/adapters";
 import { loadLibrary } from "../library.js";
 
 export interface SyncOptions {
@@ -24,7 +24,9 @@ export async function syncCommand(opts: SyncOptions): Promise<void> {
   const adapters: Adapter[] = [];
   for (const name of names) {
     const adapter = getAdapter(name);
-    if (!adapter) throw new Error(`Unknown adapter "${name}". Known: claude-code, codex, chat.`);
+    if (!adapter) {
+      throw new Error(`Unknown adapter "${name}". Known: ${adapterNames().join(", ")}.`);
+    }
     adapters.push(adapter);
   }
 
