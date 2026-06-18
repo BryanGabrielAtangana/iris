@@ -9,6 +9,7 @@ export * from "./scan.js";
 export * from "./tier1.js";
 export * from "./ranking.js";
 export * from "./fusion.js";
+export * from "./abstain.js";
 export * from "./lockfile-io.js";
 export * from "./loadout.js";
 export * from "./watch.js";

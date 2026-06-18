@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
-import type { Skill, FindResult } from "@iris-sylvia/protocol";
+import type { Skill, FindResult, FindResponse } from "@iris-sylvia/protocol";
 import {
   type EmbeddingProvider,
   type VectorStore,
@@ -19,6 +19,7 @@ import {
   type FusionConfig,
   type Signal,
 } from "./fusion.js";
+import { confidence, scoreStats, DEFAULT_CONFIDENCE } from "./abstain.js";
 import { readLockfile, writeLockfile, buildLockfile } from "./lockfile-io.js";
 import { watchLibrary, type Unsubscribe } from "./watch.js";
 
@@ -138,7 +139,38 @@ export class IrisLibrary {
       scored = this.scoreAgainst(query, qv, undefined);
     }
     scored.sort((a, b) => b.score - a.score);
+
+    // Attach calibrated confidence using the *full* distribution (background
+    // z-score + margin-to-next), before slicing to k.
+    const { mean, std } = scoreStats(scored.map((s) => s.score));
+    for (let i = 0; i < scored.length; i++) {
+      const s = scored[i]!;
+      const next = scored[i + 1]?.score ?? 0;
+      const z = std > 0 ? (s.score - mean) / std : 0;
+      s.confidence = confidence(s.score, s.score - next, z);
+    }
     return scored.slice(0, Math.max(0, k));
+  }
+
+  /**
+   * Like {@link find}, but also returns the query-level abstention signal: the
+   * top candidate's confidence and `noStrongMatch`. This is what `find_skill`
+   * surfaces so an agent can decide whether to act or ask.
+   */
+  async findDetailed(
+    query: string,
+    k = 5,
+    opts?: { scopeIds?: string[]; allowBroaden?: boolean },
+  ): Promise<FindResponse> {
+    const results = await this.find(query, k, opts);
+    // `find` already computed each result's confidence over the *full* candidate
+    // distribution (not just the top-k), so reuse the top one directly.
+    const top = results[0]?.confidence ?? 0;
+    return {
+      results,
+      confidence: top,
+      noStrongMatch: results.length === 0 || top < DEFAULT_CONFIDENCE.threshold,
+    };
   }
 
   private scoreAgainst(query: string, qv: number[], scope?: Set<string>): FindResult[] {

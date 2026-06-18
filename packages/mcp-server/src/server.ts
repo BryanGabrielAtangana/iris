@@ -104,12 +104,12 @@ export function createIrisMcpServer(
       },
     },
     async ({ query, k }) => {
-      const results = await lib.find(
+      const response = await lib.findDetailed(
         query,
         k ?? defaultK,
         scope ? { scopeIds: scope.ids, allowBroaden: scope.allowBroaden } : undefined,
       );
-      return text(results);
+      return text(response);
     },
   );
 

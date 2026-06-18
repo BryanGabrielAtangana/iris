@@ -54,9 +54,16 @@ describe("Iris MCP server (real client over in-memory transport)", () => {
       name: "find_skill",
       arguments: { query: "fill out a pdf form", k: 3 },
     })) as { content: { type: string; text?: string }[] };
-    const parsed = JSON.parse(firstText(result)) as { id: string; score: number }[];
-    expect(parsed[0]?.id).toBe("pdf-forms");
-    expect(parsed.length).toBeLessThanOrEqual(3);
+    const parsed = JSON.parse(firstText(result)) as {
+      results: { id: string; score: number; confidence?: number }[];
+      confidence: number;
+      noStrongMatch: boolean;
+    };
+    expect(parsed.results[0]?.id).toBe("pdf-forms");
+    expect(parsed.results.length).toBeLessThanOrEqual(3);
+    // A clear in-vocabulary query should be a confident, non-abstaining match.
+    expect(parsed.noStrongMatch).toBe(false);
+    expect(parsed.confidence).toBeGreaterThan(0);
   });
 
   it("loads a full skill body via load_skill", async () => {
@@ -138,9 +145,9 @@ describe("Iris MCP server — scoped loadout (Mode B)", () => {
       name: "find_skill",
       arguments: { query: "add a column to the database", k: 5 },
     })) as { content: { type: string; text?: string }[] };
-    const parsed = JSON.parse(firstText(result)) as { id: string }[];
-    expect(parsed.length).toBeGreaterThan(0);
-    for (const r of parsed) expect(SCOPE).toContain(r.id);
+    const parsed = JSON.parse(firstText(result)) as { results: { id: string }[] };
+    expect(parsed.results.length).toBeGreaterThan(0);
+    for (const r of parsed.results) expect(SCOPE).toContain(r.id);
   });
 
   it("only lists scoped prompts", async () => {

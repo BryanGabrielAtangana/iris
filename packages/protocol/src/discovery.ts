@@ -21,10 +21,27 @@ export const FindResult = z.object({
   name: z.string(),
   /** Relevance score in [0, 1]; higher is better. */
   score: z.number(),
+  /** Calibrated confidence in [0, 1] that this candidate is a genuine match. */
+  confidence: z.number().optional(),
   when_to_use: z.string().optional(),
 });
 
 export type FindResult = z.infer<typeof FindResult>;
+
+/**
+ * The full `find_skill` response: the ranked candidates plus a query-level
+ * abstention signal. `noStrongMatch` is true when even the top candidate is not
+ * a confident match — the caller should consider asking the user or not acting.
+ */
+export const FindResponse = z.object({
+  results: z.array(FindResult),
+  /** Confidence of the top candidate (0 when there are no results). */
+  confidence: z.number(),
+  /** True when nothing cleared the confidence bar — prefer to abstain. */
+  noStrongMatch: z.boolean(),
+});
+
+export type FindResponse = z.infer<typeof FindResponse>;
 
 /**
  * Soft budget for the Tier-1 index. The mini-index must stay tiny because it
