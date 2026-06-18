@@ -1,6 +1,6 @@
 {
   "name": "@iris-sylvia/mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Iris MCP server — exposes Tier-1 awareness, Tier-2 find, Tier-3 load, resources and prompts over the Model Context Protocol.",
   "license": "Apache-2.0",
   "type": "module",

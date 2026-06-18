@@ -1,5 +1,12 @@
 # @iris-sylvia/registry-client
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [5c7b95c]
+  - @iris-sylvia/protocol@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

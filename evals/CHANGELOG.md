@@ -1,5 +1,14 @@
 # @iris-sylvia/evals
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [5c7b95c]
+- Updated dependencies [fb80a14]
+  - @iris-sylvia/core@0.3.0
+  - @iris-sylvia/embeddings@0.3.0
+
 ## 0.0.1
 
 ### Patch Changes
