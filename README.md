@@ -34,21 +34,21 @@ Code, Codex, Cursor, Gemini CLI, … without modifying those agents), plus a
 
 ```
                 ┌──────────────────────────────────────────────┐
-   any agent ──▶│  @iris/mcp   (MCP server: find / load / exec) │
+   any agent ──▶│  @iris-sylvia/mcp   (MCP server: find / load / exec) │
   (Claude Code, │     tools · resources · prompts · notify      │
    Codex, …)    └───────────────────────┬──────────────────────┘
                                          │
-   you ────────▶  iris (CLI)             │   @iris/adapters
+   you ────────▶  iris (CLI)             │   @iris-sylvia/adapters
                   init/add/search/sync   │   claude-code · codex · cursor · chat
                   /doctor                 \  (write skills + Tier-1 index)
                                           │
                                 ┌─────────▼─────────┐
-                                │     @iris/core     │  scan · parse · Tier-1
+                                │     @iris-sylvia/core     │  scan · parse · Tier-1
                                 │  index · retrieve  │  index · rank · lock · watch
                                 └────┬──────────┬────┘
                                      │          │
                         ┌────────────▼───┐  ┌───▼──────────────┐
-                        │ @iris/protocol │  │ @iris/embeddings │
+                        │ @iris-sylvia/protocol │  │ @iris-sylvia/embeddings │
                         │  zod schemas   │  │ local provider + │
                         │  JSON Schema   │  │  vector store    │
                         └────────────────┘  └──────────────────┘
@@ -65,16 +65,16 @@ no cloud code anywhere in this repo.
 
 ## Packages
 
-| Package                                             | Status | Description                                                                                                                                                      |
-| --------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@iris/protocol`](packages/protocol)               | MVP    | Zod schemas + generated JSON Schema. Zero runtime deps.                                                                                                          |
-| [`@iris/embeddings`](packages/embeddings)           | MVP    | Pluggable embedding provider (offline local default) + embedded vector store.                                                                                    |
-| [`@iris/core`](packages/core)                       | MVP    | Scan, parse, Tier-1 index, Tier-2 retrieval/ranking, `iris.lock`, watcher.                                                                                       |
-| [`@iris/mcp`](packages/mcp-server)                  | MVP    | MCP gateway: `find_skill` / `load_skill` / `run_skill_script`, resources, prompts.                                                                               |
-| [`iris`](packages/cli)                              | MVP    | CLI: `init`, `add`, `remove`, `search`, `sync`, `doctor`.                                                                                                        |
-| [`@iris/adapters`](packages/adapters)               | MVP    | Per-surface write logic: `claude-code`, `codex`, `cursor`, `chat`. Injects an always-loaded awareness directive + the Tier-1 index so skills fire automatically. |
-| [`@iris/registry-client`](packages/registry-client) | stub   | `@namespace/skill` resolution, fetch/publish (deferred).                                                                                                         |
-| [`evals/`](evals)                                   | MVP    | Discovery-accuracy benchmark vs a naive baseline.                                                                                                                |
+| Package                                                    | Status | Description                                                                                                                                                      |
+| ---------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@iris-sylvia/protocol`](packages/protocol)               | MVP    | Zod schemas + generated JSON Schema. Zero runtime deps.                                                                                                          |
+| [`@iris-sylvia/embeddings`](packages/embeddings)           | MVP    | Pluggable embedding provider (offline local default) + embedded vector store.                                                                                    |
+| [`@iris-sylvia/core`](packages/core)                       | MVP    | Scan, parse, Tier-1 index, Tier-2 retrieval/ranking, `iris.lock`, watcher.                                                                                       |
+| [`@iris-sylvia/mcp`](packages/mcp-server)                  | MVP    | MCP gateway: `find_skill` / `load_skill` / `run_skill_script`, resources, prompts.                                                                               |
+| [`iris`](packages/cli)                                     | MVP    | CLI: `init`, `add`, `remove`, `search`, `sync`, `doctor`.                                                                                                        |
+| [`@iris-sylvia/adapters`](packages/adapters)               | MVP    | Per-surface write logic: `claude-code`, `codex`, `cursor`, `chat`. Injects an always-loaded awareness directive + the Tier-1 index so skills fire automatically. |
+| [`@iris-sylvia/registry-client`](packages/registry-client) | stub   | `@namespace/skill` resolution, fetch/publish (deferred).                                                                                                         |
+| [`evals/`](evals)                                          | MVP    | Discovery-accuracy benchmark vs a naive baseline.                                                                                                                |
 
 ## Quickstart
 
@@ -138,7 +138,7 @@ The `evals/` harness compares Iris's two-tier retrieval against the naive
 baseline (flat `name + description` matching) over a labeled query→skill set:
 
 ```bash
-pnpm --filter @iris/evals bench
+pnpm --filter @iris-sylvia/evals bench
 ```
 
 ```

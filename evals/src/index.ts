@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-/** @iris/evals — discovery-accuracy benchmark harness. */
+/** @iris-sylvia/evals — discovery-accuracy benchmark harness. */
 export * from "./dataset.js";
 export * from "./baseline.js";
 export * from "./runner.js";

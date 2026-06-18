@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { readdir } from "node:fs/promises";
 import { join, basename } from "node:path";
-import type { Skill } from "@iris/protocol";
+import type { Skill } from "@iris-sylvia/protocol";
 import { parseSkillFile } from "./parse-skill.js";
 
 const IGNORED_DIRS = new Set(["node_modules", ".git", ".turbo", "dist", ".iris"]);

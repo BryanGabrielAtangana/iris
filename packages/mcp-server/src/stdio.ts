@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { IrisLibrary } from "@iris/core";
+import { IrisLibrary } from "@iris-sylvia/core";
 import { createIrisMcpServer, type CreateServerOptions } from "./server.js";
 
 export interface StdioOptions extends CreateServerOptions {

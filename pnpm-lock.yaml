@@ -47,31 +47,31 @@ importers:
 
   evals:
     dependencies:
-      '@iris/core':
+      '@iris-sylvia/core':
         specifier: workspace:*
         version: link:../packages/core
-      '@iris/embeddings':
+      '@iris-sylvia/embeddings':
         specifier: workspace:*
         version: link:../packages/embeddings
 
   packages/adapters:
     dependencies:
-      '@iris/core':
+      '@iris-sylvia/core':
         specifier: workspace:*
         version: link:../core
-      '@iris/protocol':
+      '@iris-sylvia/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/cli:
     dependencies:
-      '@iris/adapters':
+      '@iris-sylvia/adapters':
         specifier: workspace:*
         version: link:../adapters
-      '@iris/core':
+      '@iris-sylvia/core':
         specifier: workspace:*
         version: link:../core
-      '@iris/protocol':
+      '@iris-sylvia/protocol':
         specifier: workspace:*
         version: link:../protocol
       commander:
@@ -80,10 +80,10 @@ importers:
 
   packages/core:
     dependencies:
-      '@iris/embeddings':
+      '@iris-sylvia/embeddings':
         specifier: workspace:*
         version: link:../embeddings
-      '@iris/protocol':
+      '@iris-sylvia/protocol':
         specifier: workspace:*
         version: link:../protocol
       chokidar:
@@ -107,10 +107,10 @@ importers:
 
   packages/mcp-server:
     dependencies:
-      '@iris/core':
+      '@iris-sylvia/core':
         specifier: workspace:*
         version: link:../core
-      '@iris/protocol':
+      '@iris-sylvia/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@modelcontextprotocol/sdk':
@@ -131,7 +131,7 @@ importers:
 
   packages/registry-client:
     dependencies:
-      '@iris/protocol':
+      '@iris-sylvia/protocol':
         specifier: workspace:*
         version: link:../protocol
 

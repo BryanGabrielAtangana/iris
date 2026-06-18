@@ -1,4 +1,4 @@
-# @iris/adapters
+# @iris-sylvia/adapters
 
 Per-surface adapters that write skills + an always-loaded awareness directive into agent surfaces: `claude-code`, `codex`, `cursor`, and a chat-only fallback.
 

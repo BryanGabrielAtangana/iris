@@ -1,4 +1,4 @@
-# @iris/cli
+# @iris-sylvia/cli
 
 The Iris CLI (`iris`): `init`, `add`, `remove`, `search`, `sync`, `doctor` — manage a portable skill library and sync it into your agents.
 

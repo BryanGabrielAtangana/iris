@@ -11,7 +11,7 @@ import {
   estimateTokens,
   readLockfile,
 } from "../src/index.js";
-import { TIER1_TOKEN_BUDGET } from "@iris/protocol";
+import { TIER1_TOKEN_BUDGET } from "@iris-sylvia/protocol";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const LIB = join(here, "fixtures", "lib");

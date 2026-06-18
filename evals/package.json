@@ -1,5 +1,5 @@
 {
-  "name": "@iris/evals",
+  "name": "@iris-sylvia/evals",
   "version": "0.0.0",
   "private": true,
   "description": "Iris discovery-accuracy benchmark: Iris two-tier retrieval vs a naive flat-description baseline.",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@iris/core": "workspace:*",
-    "@iris/embeddings": "workspace:*"
+    "@iris-sylvia/core": "workspace:*",
+    "@iris-sylvia/embeddings": "workspace:*"
   }
 }

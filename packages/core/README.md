@@ -1,4 +1,4 @@
-# @iris/core
+# @iris-sylvia/core
 
 The heart of Iris: scan a skill library, parse `SKILL.md`, build the Tier-1 awareness index, run Tier-2 hybrid retrieval, and manage `iris.lock` with hot reload.
 

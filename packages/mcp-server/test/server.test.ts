@@ -4,11 +4,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { IrisLibrary } from "@iris/core";
+import { IrisLibrary } from "@iris-sylvia/core";
 import { createIrisMcpServer } from "../src/index.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-// Reuse the rich fixture library from @iris/core.
+// Reuse the rich fixture library from @iris-sylvia/core.
 const LIB = join(here, "..", "..", "core", "test", "fixtures", "lib");
 
 function firstText(result: { content: { type: string; text?: string }[] }): string {

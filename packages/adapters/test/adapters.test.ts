@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
-import { IrisLibrary } from "@iris/core";
+import { IrisLibrary } from "@iris-sylvia/core";
 import {
   ClaudeCodeAdapter,
   ChatAdapter,

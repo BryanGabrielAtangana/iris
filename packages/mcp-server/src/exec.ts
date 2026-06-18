@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { execFile } from "node:child_process";
 import { join, extname } from "node:path";
-import type { Skill } from "@iris/protocol";
+import type { Skill } from "@iris-sylvia/protocol";
 
 export type ExecResult = { ok: true; output: string } | { ok: false; message: string };
 

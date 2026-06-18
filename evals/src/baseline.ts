@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Skill, FindResult } from "@iris/core";
+import type { Skill, FindResult } from "@iris-sylvia/core";
 import {
   createEmbeddingProvider,
   cosineSimilarity,
   type EmbeddingProvider,
-} from "@iris/embeddings";
+} from "@iris-sylvia/embeddings";
 
 /**
  * The naive baseline that Iris must beat.

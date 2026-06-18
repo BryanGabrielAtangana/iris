@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * @iris/embeddings — the pluggable embedding + vector-store layer.
+ * @iris-sylvia/embeddings — the pluggable embedding + vector-store layer.
  *
- * Sits between @iris/protocol and @iris/core. The default provider is local,
+ * Sits between @iris-sylvia/protocol and @iris-sylvia/core. The default provider is local,
  * deterministic and offline so retrieval works with zero setup; production
  * deployments can swap in FastEmbed or a hosted provider behind the same
  * {@link EmbeddingProvider} interface.

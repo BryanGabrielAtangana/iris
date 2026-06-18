@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Skill } from "@iris/protocol";
+import type { Skill } from "@iris-sylvia/protocol";
 
 export interface AdapterContext {
   /**

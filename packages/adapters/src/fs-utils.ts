@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { mkdir, rm, cp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Skill } from "@iris/protocol";
+import type { Skill } from "@iris-sylvia/protocol";
 
 /**
  * Copy a skill folder into `<skillsDir>/<id>`, optionally omitting `scripts/`

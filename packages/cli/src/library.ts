@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { resolve } from "node:path";
-import { IrisLibrary } from "@iris/core";
+import { IrisLibrary } from "@iris-sylvia/core";
 
 /** Resolve the library root from an explicit option, env, or cwd. */
 export function resolveLibraryRoot(explicit?: string): string {

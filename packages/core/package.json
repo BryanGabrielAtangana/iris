@@ -1,5 +1,5 @@
 {
-  "name": "@iris/core",
+  "name": "@iris-sylvia/core",
   "version": "0.1.0",
   "description": "Iris core — skill scanning, parsing, Tier-1 index, Tier-2 retrieval, ranking and the iris.lock manifest.",
   "license": "Apache-2.0",
@@ -24,8 +24,8 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@iris/protocol": "workspace:*",
-    "@iris/embeddings": "workspace:*",
+    "@iris-sylvia/protocol": "workspace:*",
+    "@iris-sylvia/embeddings": "workspace:*",
     "chokidar": "^5.0.0",
     "gray-matter": "^4.0.3",
     "remark-parse": "^11.0.0",

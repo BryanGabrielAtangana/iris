@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { writeLockfile, readLockfile } from "@iris/core";
+import { writeLockfile, readLockfile } from "@iris-sylvia/core";
 import { resolveLibraryRoot } from "../library.js";
 
 export interface InitOptions {

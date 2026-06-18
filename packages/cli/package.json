@@ -1,5 +1,5 @@
 {
-  "name": "@iris/cli",
+  "name": "@iris-sylvia/cli",
   "version": "0.1.0",
   "description": "Iris CLI — manage a portable skill library and sync it into your agents.",
   "license": "Apache-2.0",
@@ -18,9 +18,9 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@iris/adapters": "workspace:*",
-    "@iris/core": "workspace:*",
-    "@iris/protocol": "workspace:*",
+    "@iris-sylvia/adapters": "workspace:*",
+    "@iris-sylvia/core": "workspace:*",
+    "@iris-sylvia/protocol": "workspace:*",
     "commander": "^15.0.0"
   },
   "keywords": [

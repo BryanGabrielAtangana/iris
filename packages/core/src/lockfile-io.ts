@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
-import { Lockfile, EMPTY_LOCKFILE, type Skill, type LockEntry } from "@iris/protocol";
+import { Lockfile, EMPTY_LOCKFILE, type Skill, type LockEntry } from "@iris-sylvia/protocol";
 
 export const LOCKFILE_NAME = "iris.lock";
 
